@@ -38,7 +38,6 @@ from sklearn.mixture import GMM, DPGMM
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.preprocessing import StandardScaler
 
-
 base = 'http://data.nba.com/json/cms/noseason'
 cnn_base = 'http://data.sportsillustrated.cnn.com/jsonp/basketball/nba/'
 si_base = 'http://www.si.com/nba/'
@@ -53,6 +52,8 @@ boxscores = db.boxscores
 players = db.players
 teams = db.teams
 pbp = db.pbp
+
+from GameEvent import GameEvent
 
 start_date = dt.datetime(2012, 10, 07)
 
@@ -456,19 +457,18 @@ def get_all_data(start_date, end_date, source='cnn'):
 
 def player_shot_chart(game_id, player_id, **kwargs):
 
-    game = pbp.find_one({'playbyplay.contest.id': str(game_id)})
+    game = GameEvent(pbp, game_id)
 
-    plays = game['playbyplay']['plays']['play']
-    player_plays = [play for play in plays if play['player1-id'] == str(player_id)]
-    shooting_plays = [play for play in player_plays 
-                      if 'Shot' in play['detail-desc'] 
-                      and play['x-coord'] != '' 
-                      and play['y-coord'] != '']
-    made_shots = [play for play in shooting_plays if 'Made' in play['event-desc']]
-    missed_shots = [play for play in shooting_plays if 'Missed' in play['event-desc']]
+    player_plays = game.events_by_player(player_id)
 
-    made_shots_coords = [{'x': float(shot['x-coord']), 'y': float(shot['y-coord']) + 5.25} for shot in made_shots]
-    missed_shots_coords = [{'x': float(shot['x-coord']), 'y': float(shot['y-coord'])+ 5.25} for shot in missed_shots]
+
+    made_shots = [play['shotCoordinates'] for play in player_plays if 
+                  play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Made']
+    missed_shots = [play['shotCoordinates'] for play in player_plays if
+                    play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Missed']
+
+    made_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y']) + 5.25} for shot in made_shots]
+    missed_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y'])+ 5.25} for shot in missed_shots]
 
     #print made_shots_coords
     #print missed_shots_coords
@@ -495,8 +495,10 @@ def player_shot_chart(game_id, player_id, **kwargs):
         else:
             overplot_shots = False
 
-        gd = game_day(game_id).replace('/', '-')
-        team1_name, team1_id, team2_name, team2_id = game_teams(game_id)
+        gd = dt.datetime.strftime(game.date, '%Y-%m-%d')
+        team1_name = game.home_team['nickname']
+        team2_name = game.away_team['nickname']
+
         first_name, last_name = look_up_player_name(player_id)
 
         create_shot_chart(made_shots_coords, missed_shots_coords,
@@ -885,8 +887,8 @@ def quarter_starters(game_id):
         
 def play_time(play):
 
-    return dt.timedelta(minutes=((4 - int(play['quarter'])) * 12 + int(play['time-minutes'])),
-                        seconds=int(float(play['time-seconds'])))
+    return dt.timedelta(minutes=((4 - int(play['period'])) * 12 + int(play['time']['minutes'])),
+                        seconds=int(float(play['time']['seconds'])))
 
 def player_time_on_court(game_id, player_id, return_type='timestream'):
 
@@ -2659,7 +2661,7 @@ def games_played_by_team(team_id, start_date=None, end_date=None):
 
 def look_up_player_id (first_name, last_name):
 
-    player = players.find_one({'first-name': first_name, 'last-name': last_name})
+    player = players.find_one({'firstName': first_name, 'lastName': last_name})
     player_id = str(player['id'])
 
     return player_id
@@ -2667,7 +2669,7 @@ def look_up_player_id (first_name, last_name):
 def look_up_player_name (player_id):
 
     player = players.find_one({'id': int(player_id)})
-    return player['first-name'], player['last-name']
+    return player['firstName'], player['lastName']
 
 def look_up_team_name (team_id):
 
