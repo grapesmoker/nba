@@ -18,7 +18,7 @@ class Game:
 
     _coll = pbp
 
-    def __init__(self, collection=None, event_id=None):
+    def __init__(self, event_id=None, collection=None):
         if collection is not None:
             self.__class__._coll = collection
             self._coll = collection
@@ -79,6 +79,14 @@ class Game:
     def date(self):
         return self._date
 
+    @property
+    def home_boxscore(self):
+        return self._core_data['boxscores'][0]
+
+    @property
+    def away_boxscore(self):
+        return self._core_data['boxscores'][1]
+
     def events_by_player(self, player_id):
         
         def is_player_involved(event, player_id):
@@ -131,4 +139,18 @@ class Game:
 
         return quarter_starters
 
-                    
+    @classmethod
+    def look_up_game(game_day, team_id):
+
+        game = _coll.find_one({'league.season.eventType.0.events.0.startDate.0.month': game_day.month,
+                             'league.season.eventType.0.events.0.startDate.0.year': game_day.year,
+                             'league.season.eventType.0.events.0.startDate.0.date': game_day.day,
+                             '$or': [{'league.season.eventType.0.events.0.teams.0.teamId': team_id},
+                                     {'league.season.eventType.0.events.0.teams.1.teamId': team_id}]})
+    
+        if game is not None:
+            return Game(game['league']['season']['eventType'][0]['events'][0]['eventId'])
+        else:
+            return None
+
+    

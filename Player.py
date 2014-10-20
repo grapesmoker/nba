@@ -1,7 +1,9 @@
 import datetime as dt
 
-from nba_2013_14 import players, play_time, check_time_consistency
-from GameEvent import GameEvent
+from nba_2013_14 import players, play_time, check_time_consistency, create_shot_chart
+
+import Game
+import Player
 
 class Player:
 
@@ -35,7 +37,7 @@ class Player:
 
     def time_on_court(self, game_id):
 
-        game = GameEvent(event_id=game_id)
+        game = Game.Game(event_id=game_id)
 
         plays_subbed_in = [play for play in game.pbp if play['playText'].find('Substitution:') > -1
                            and play['players'][0]['playerId'] == self._id]
@@ -90,3 +92,54 @@ class Player:
         time_stream = zip(times_subbed_in, times_subbed_out)
 
         return time_stream
+
+    def player_shot_chart(self, game_id, **kwargs):
+
+        game = Game.Game(pbp, game_id)
+
+        player_plays = game.events_by_player(player_id)
+
+
+        made_shots = [play['shotCoordinates'] for play in player_plays if 
+                      play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Made']
+        missed_shots = [play['shotCoordinates'] for play in player_plays if
+                        play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Missed']
+
+        made_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y']) + 5.25} for shot in made_shots]
+        missed_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y'])+ 5.25} for shot in missed_shots]
+
+        #print made_shots_coords
+        #print missed_shots_coords
+
+        if 'return' in kwargs:
+            if kwargs['return'] == True:
+                return made_shots_coords, missed_shots_coords
+            else:
+                kwargs['plot'] = True
+        else:
+            kwargs['plot'] = True
+
+        if 'plot' in kwargs:
+            if 'plot_type' in kwargs:
+                plot_type = kwargs['plot_type']
+            else:
+                plot_type = 'hexbin'
+            if 'hex_size' in kwargs:
+                hex_size = kwargs['hex_size']
+            else:
+                hex_size = 1
+            if 'overplot_shots' in kwargs:
+                overplot_shots = kwargs['overplot_shots']
+            else:
+                overplot_shots = False
+
+            gd = dt.datetime.strftime(game.date, '%Y-%m-%d')
+            team1_name = game.home_team['nickname']
+            team2_name = game.away_team['nickname']
+            
+            first_name, last_name = look_up_player_name(player_id)
+
+            create_shot_chart(made_shots_coords, missed_shots_coords,
+                              'plots/players/{}_{}_shots_{}_{}_vs_{}.pdf'.format(first_name, last_name, gd, team1_name, team2_name),
+                              '{} {} on {} - {} vs {}'.format(first_name, last_name, gd, team1_name, team2_name),
+                              plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)

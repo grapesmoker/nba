@@ -53,7 +53,7 @@ players = db.players
 teams = db.teams
 pbp = db.pbp
 
-from GameEvent import GameEvent
+# from GameEvent import GameEvent
 
 start_date = dt.datetime(2012, 10, 07)
 
@@ -457,7 +457,7 @@ def get_all_data(start_date, end_date, source='cnn'):
 
 def player_shot_chart(game_id, player_id, **kwargs):
 
-    game = GameEvent(pbp, game_id)
+    game = None #GameEvent(pbp, game_id)
 
     player_plays = game.events_by_player(player_id)
 
