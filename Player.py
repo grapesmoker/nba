@@ -1,6 +1,9 @@
 import datetime as dt
 
-from nba_2013_14 import players, play_time, check_time_consistency, create_shot_chart
+from settings import players
+from utils import play_time
+
+# play_time, check_time_consistency, create_shot_chart
 
 import Game
 import Player
@@ -35,6 +38,24 @@ class Player:
     def __repr__(self):
         return self.__str__()
 
+    def check_time_consistency(self, times_subbed_in, times_subbed_out):
+
+        consistent = True
+
+        if len(times_subbed_in) == len(times_subbed_out) or len(times_subbed_in) == len(times_subbed_out) + 1:
+            correct = True
+            for to in times_subbed_out:
+                for i, ti in enumerate(times_subbed_in[:-1]):
+                    ti_next = times_subbed_in[i + 1]
+                    if not (to < ti and to >= ti_next):
+                        correct = False
+
+            consistent = correct
+        else:
+            consistent = False
+
+        return consistent
+
     def time_on_court(self, game_id):
 
         game = Game.Game(event_id=game_id)
@@ -65,7 +86,7 @@ class Player:
 
         i = 0
 
-        while not check_time_consistency(times_subbed_in, times_subbed_out) and i < len(times_subbed_in):
+        while not self.check_time_consistency(times_subbed_in, times_subbed_out) and i < len(times_subbed_in):
             ti = times_subbed_in[i]
             if i + 1 < len(times_subbed_in):
                 ti_next = times_subbed_in[i + 1]

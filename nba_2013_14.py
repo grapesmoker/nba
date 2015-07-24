@@ -89,7 +89,7 @@ def get_boxscore(date, game_id, output_file=None):
     # boxscore_url = base + '/game/' + format_date(date) + '/{0}/boxscore.json'.format(game_id)
     boxscore_url = cnn_base + 'gameflash' + format_date(date) + '{0}_boxscore.json'.format(game_id)
     print boxscore_url
-    
+
     try:
         if output_file is not None and os.path.exists(output_file):
             data = open(output_file, 'r').read()
@@ -103,7 +103,7 @@ def get_boxscore(date, game_id, output_file=None):
                 of.write(data)
 
         boxscore_json = json.loads(data)
-        
+
     except Exception as ex:
         print ex
         print 'Data not found'
@@ -213,11 +213,7 @@ def quarter_starters(game_id):
         quarter_starters[q] = players_used
 
     return quarter_starters
-        
-def play_time(play):
 
-    return dt.timedelta(minutes=((4 - int(play['period'])) * 12 + int(play['time']['minutes'])),
-                        seconds=int(float(play['time']['seconds'])))
 
 def player_time_on_court(game_id, player_id, return_type='timestream'):
 
@@ -381,28 +377,7 @@ def check_sub_times_consistency(player_id):
 
         if abs(boxscore_seconds - calc_seconds) > 120:
             print 'Discrepancy of {}s'.format(abs(boxscore_seconds - calc_seconds))
-                                            
 
-def check_time_consistency(times_subbed_in, times_subbed_out):
-
-    consistent = True
-
-    if len(times_subbed_in) == len(times_subbed_out) or len(times_subbed_in) == len(times_subbed_out) + 1:
-        correct = True
-        for to in times_subbed_out:
-            for i, ti in enumerate(times_subbed_in[:-1]):
-                ti_next = times_subbed_in[i + 1]
-                if not (to < ti and to >= ti_next):
-                    correct = False
-
-        consistent = correct
-        #for ti, to in zip(times_subbed_in, times_subbed_out):
-        #    if ti < to:
-        #        consitent = False
-    else:
-        consistent = False
-
-    return consistent
 
 def game_players(game_id, team_id):
 
@@ -1645,18 +1620,6 @@ def games_played_by_team(team_id, start_date=None, end_date=None):
 
     return chron_games
 
-
-def look_up_player_id (first_name, last_name):
-
-    player = players.find_one({'firstName': first_name, 'lastName': last_name})
-    player_id = str(player['id'])
-
-    return player_id
-
-def look_up_player_name (player_id):
-
-    player = players.find_one({'id': int(player_id)})
-    return player['firstName'], player['lastName']
 
 def look_up_team_name (team_id):
 
