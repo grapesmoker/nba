@@ -1,0 +1,4 @@
+json_data/*
+mongo_data/*
+*.pyc
+*.ipynb

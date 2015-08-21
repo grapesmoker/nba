@@ -1,4 +1,4 @@
-from nba_2013_14 import teams
+from network import teams
 
 class NoCollectionError(Exception):
 
@@ -7,6 +7,15 @@ class NoCollectionError(Exception):
 
     def __str__(self):
         return self.msg
+
+class TeamDataError(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
 
 
 class Team:
@@ -48,14 +57,38 @@ class Team:
     def __repr__(self):
         return self.__str__()
 
+    def possessions(self, game):
 
-    def get_team_stats(game_day, stat):
+        if game.is_home(self):
+            return game.home_possessions
+        elif game.is_away(self):
+            return game.away_possessions
+        else:
+            raise TeamDataError('{} did not participate in {}'.format(self, game))
 
-        game = Game.look_up_game(game_day, self._id)
-        
-        if self._id == game.home_team['id']:
-            game_stats = game.home_boxscore['teamStats']
-        elif self._id == game.away_team['id']:
-            game_stats = game.away_boxscore['teamStats']
+    def stats(self, game):
 
-        #stats_data = [data_value for data_name in game_stats if data
+        if game.is_home(self):
+            return game.home_boxscore
+        elif game.is_away(self):
+            return game.away_boxscore
+        else:
+            raise TeamDataError('{} did not participate in {}'.format(self, game))
+
+    def drtg(self, game):
+
+        if game.is_home(self):
+            return game.home_drtg
+        elif game.is_away(self):
+            return game.away_drtg
+        else:
+            raise TeamDataError('{} did not participate in {}'.format(self, game))
+
+    def ortg(self, game):
+
+        if game.is_home(self):
+            return game.home_ortg
+        elif game.is_away(self):
+            return game.away_ortg
+        else:
+            raise TeamDataError('{} did not participate in {}'.format(self, game))
