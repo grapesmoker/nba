@@ -8,6 +8,7 @@ from itertools import combinations
 from Team import Team
 from Player import Player
 from Event import Event
+from Boxscore import TeamBoxscore, PlayerBoxscore
 
 from utils import recursive_intersect
 
@@ -120,6 +121,14 @@ class Game:
     def away_boxscore(self):
         return self._core_data['boxscores'][1]
 
+    def team_boxscore(self, team):
+        if self.is_home(team):
+            return self.home_boxscore
+        elif self.is_away(team):
+            return self.away_boxscore
+        else:
+            raise GameDataError('{} did not participate in {}'.format(team, self))
+
     def is_home(self, team):
         if self.home_boxscore['teamId'] == team.id:
             return True
@@ -131,6 +140,14 @@ class Game:
             return True
         else:
             return False
+
+    def score(self, team):
+        if self.is_home(team):
+            return self.home_boxscore['teamStats']['points']
+        elif self.is_away(team):
+            return self.away_boxscore['teamStats']['points']
+        else:
+            raise GameDataError('{} did not participate in {}'.format(team, self))
 
     @property
     def home_lineup_combinations(self):
@@ -196,6 +213,14 @@ class Game:
 
         return away_pos
 
+    def possessions(self, team):
+        if self.is_home(team):
+            return self.home_possessions
+        elif self.is_away(team):
+            return self.away_possessions
+        else:
+            raise GameDataError('{} did not participate in {}'.format(team, self))
+
     @property
     def home_drtg(self):
         return 100 * self.away_boxscore['teamStats']['points'] / self.away_possessions
@@ -211,6 +236,30 @@ class Game:
     @property
     def away_ortg(self):
         return 100 * self.away_boxscore['teamStats']['points'] / self.away_possessions
+
+    def __contains__(self, player_or_team):
+
+        if isinstance(player_or_team, Player):
+            return self.player_in_game(player_or_team)
+        elif isinstance(player_or_team, Team):
+            return self.is_home(player_or_team) or self.is_away(player_or_team)
+        else:
+            raise TypeError('{} is neither Player nor Team!'.format(repr(player_or_team)))
+
+    def player_in_game(self, player):
+
+        home = [self.home_boxscore['teamId']
+                for stat in self.home_boxscore['playerstats']
+                if stat['player']['playerId'] == player.id]
+
+        away = [self.away_boxscore['teamId']
+                for stat in self.away_boxscore['playerstats']
+                if stat['player']['playerId'] == player.id]
+
+        if home != [] or away != []:
+            return True
+        else:
+            return False
 
     def player_team(self, player):
 
@@ -329,7 +378,7 @@ class Game:
 
     def events_in_interval(self, interval):
 
-        return [event for event in self.events if interval[1] < event.play_time < interval[0]]
+        return sorted([event for event in self.events if interval[1] < event.play_time < interval[0]])
 
     def events_in_intervals(self, intervals):
 
@@ -339,37 +388,34 @@ class Game:
 
         return sorted(all_plays)
 
+    def __cmp__(self, other):
+        if self.date == other.date:
+            return 0
+        elif self.date < other.date:
+            return -1
+        elif self.date > other.date:
+            return 1
 
-    def boxscore_stats(self):
+    def team_stats_by_time(self, team, timestream):
 
-        home_boxscore['POS'] = home_pos
-        away_boxscore['POS'] = away_pos
-        home_boxscore['DRTG'] = home_drtg
-        home_boxscore['ORTG'] = home_ortg
-        away_boxscore['DRTG'] = away_drtg
-        away_boxscore['ORTG'] = away_ortg
+        events = self.events_in_intervals(timestream)
 
-        home_boxscore['REST'] = calc_days_rest(game_day, home_team_id)
-        away_boxscore['REST'] = calc_days_rest(game_day, look_up_opponent(game_id, home_team_id))
+        team_box_score = TeamBoxscore()
+        for event in events:
+            # we only care about plays that actually accrue counting stats
+            if event.is_field_goal_made:
+                player = event.shot_made_by
+                if team.is_player_on_team(player):
+                    assister = event.assisted_by
+                    team_box_score.points += 2
+                    team_box_score.field_goals_made += 1
+                    team_box_score.field_goals_attempted += 1
+                    if assister:
+                        team_box_score.assists += 1
 
-        return home_boxscore, away_boxscore
+            elif event.is_field_goal_missed:
+                player = event.shot_missed_by
+                if team.is_player_on_team(player):
+                    team_box_score.field_goals_attempted += 1
+                    team_box_score.field_goals_missed += 1
 
-    def game_stats_by_time(self, team_id, timestream, stat):
-
-        plays = [play for play in game['playbyplay']['plays']['play'] if play['team-id-1'] == str(team_id)]
-
-        int_plays = get_plays_in_intervals(plays, timestream)
-
-        if stat == 'efg':
-            made_shots_coords, missed_shots_coords = filter_missed_made(int_plays)
-            total_made = len(made_shots_coords)
-            total_missed = len(missed_shots_coords)
-            total_attempts = total_made + total_missed
-            total_threes = len([shot for shot in made_shots_coords if is_shot_three(shot['x'], shot['y'])])
-            if total_attempts > 0:
-                efg = 100 * (total_made + 0.5 * total_threes) / total_attempts
-            else:
-                efg = 0
-
-            return efg, total_made, total_threes, total_attempts
-    

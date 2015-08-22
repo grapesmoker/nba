@@ -251,70 +251,31 @@ class Player:
         team_stats = team.stats(game)['teamStats']
         opp_stats = opp.stats(game)['teamStats']
 
-        ast = box_score['assists']
-        fgm = box_score['fieldGoals']['made']
-        fga = box_score['fieldGoals']['attempted']
-        ftm = box_score['freeThrows']['made']
-        fta = box_score['freeThrows']['attempted']
-        tov = box_score['turnovers']
-        threes = box_score['threePointFieldGoals']['made']
-        orb = box_score['rebounds']['offensive']
         drb = box_score['rebounds']['defensive']
-        pts = box_score['points']
         mp = box_score['totalSecondsPlayed'] / 60.0
         stl = box_score['steals']
         blk = box_score['blockedShots']
         pf = box_score['personalFouls']
 
-        team_fgm = team_stats['fieldGoals']['made']
-        team_fga = team_stats['fieldGoals']['attempted']
-        team_ast = team_stats['assists']
         team_mp = team_stats['minutes']
-        team_ftm = team_stats['freeThrows']['made']
-        team_fta = team_stats['freeThrows']['attempted']
-        team_orb = team_stats['rebounds']['offensive']
         team_drb = team_stats['rebounds']['defensive']
-        team_pts = team_stats['points']
-        team_3pm = team_stats['threePointFieldGoals']['made']
-        team_tov = team_stats['turnovers']['total']
         team_blk = team_stats['blockedShots']
         team_stl = team_stats['steals']
         team_pf = team_stats['personalFouls']
         team_pos = team.possessions(game)
         team_drtg = team.drtg(game)
 
-        print team_drtg
-
         opp_orb = opp_stats['rebounds']['offensive']
         opp_fga = opp_stats['fieldGoals']['attempted']
-        #opp_3pa = opp_stats['3PA']
         opp_fgm = opp_stats['fieldGoals']['made']
         opp_tov = opp_stats['turnovers']['total']
         opp_ftm = opp_stats['freeThrows']['made']
         opp_fta = opp_stats['freeThrows']['attempted']
         opp_mp = opp_stats['minutes']
         opp_pts = opp_stats['points']
-        opp_pos = opp.possessions(game)
 
         dfg_pct = opp_fgm / opp_fga
         dor_pct = opp_orb / (team_drb + opp_orb)
-        team_orb_pct = team_orb / (opp_orb + team_drb)
-
-        # FMwt = (dfg_pct * (1 - dor_pct)) / (dfg_pct * (1 - dor_pct) + (1 - dfg_pct) * dor_pct)
-        # Stops1 = stl + blk * FMwt * (1 - 1.07 * dor_pct) + drb * (1 - FMwt)
-
-        # Stops2_a = (((opp_fga - opp_fgm - team_blk) / team_mp) * FMwt * (1 - 1.07 * dor_pct) + ((opp_tov - team_stl) / team_mp)) * mp
-        # Stops2_b =  (pf / team_pf) * 0.4 * opp_fta * (1 - (opp_ftm / opp_fta))**2
-        # Stops2 = Stops2_a + Stops2_b
-
-        # Stops = Stops1 + Stops2
-        # Stop_pct = (Stops * opp_mp) / (team_pos * mp)
-
-        # D_Pts_per_ScPoss = opp_pts / (opp_fgm + (1 - (1 - (opp_ftm / opp_fta))**2) * opp_fta *0.4)
-
-        # DRtg = team_drtg + 0.2 * (100 * D_Pts_per_ScPoss * (1 - Stop_pct) - team_drtg)
-
-        # return DRtg
 
 
         fmwt = (dfg_pct * (1 - dor_pct)) / (dfg_pct * (1 - dor_pct) + (1 - dfg_pct) * dor_pct)
@@ -331,3 +292,83 @@ class Player:
         drtg = team_drtg + 0.2 * (100 * d_pts_per_scrposs * (1 - stop_pct) - team_drtg)
 
         return drtg
+
+    def ortg(self, game):
+
+        box_score = game.player_boxscore(self)
+        team = game.player_team(self)
+        opp = game.opponent(team)
+
+        team_stats = team.stats(game)['teamStats']
+        opp_stats = opp.stats(game)['teamStats']
+
+        ast = box_score['assists']
+        fgm = box_score['fieldGoals']['made']
+        fga = box_score['fieldGoals']['attempted']
+        ftm = box_score['freeThrows']['made']
+        fta = box_score['freeThrows']['attempted']
+        tov = box_score['turnovers']
+        threes = box_score['threePointFieldGoals']['made']
+        orb = box_score['rebounds']['offensive']
+        pts = box_score['points']
+        mp = box_score['totalSecondsPlayed']/ 60.0
+
+        team_fgm = team_stats['fieldGoals']['made']
+        team_fga = team_stats['fieldGoals']['attempted']
+        team_ast = team_stats['assists']
+        team_mp = team_stats['minutes']
+        team_ftm = team_stats['freeThrows']['made']
+        team_fta = team_stats['freeThrows']['attempted']
+        team_orb = team_stats['rebounds']['offensive']
+        team_pts = team_stats['points']
+        team_3pm = team_stats['threePointFieldGoals']['made']
+        team_tov = team_stats['turnovers']['total']
+        opp_drb = opp_stats['rebounds']['defensive']
+
+        team_orb_pct = team_orb / (opp_drb + team_orb)
+
+        ft_part = (1 - (1 - (ftm / fta))**2) * 0.4 * fta
+        ast_part = 0.5 * (((team_pts - team_ftm) - (pts - ftm)) / (2 * (team_fga - fga))) * ast
+        q_ast = ((mp / (team_mp / 5)) * (1.14 * ((team_ast - ast) / team_fgm))) + ((((team_ast / team_mp) * mp * 5 - ast) / ((team_fgm / team_mp) * mp * 5 - fgm)) * (1 - (mp / (team_mp / 5))))
+        fg_part = fgm * (1 - 0.5 * ((pts - ftm) / (2 * fga)) * q_ast)
+        team_scoring_poss = team_fgm + (1 - (1 - (team_ftm / team_fta))**2) * team_fta * 0.4
+        team_play_pct = team_scoring_poss / (team_fga + team_fta * 0.4 + team_tov)
+        team_orb_weight = ((1 - team_orb_pct) * team_play_pct) / ((1 - team_orb_pct) * team_play_pct + team_orb_pct * (1 - team_play_pct))
+        orb_part = orb * team_orb_weight * team_play_pct
+
+        scr_poss = (fg_part + ast_part + ft_part) * (1 - (team_orb / team_scoring_poss) * team_orb_weight * team_play_pct) + orb_part
+
+        fg_x_poss = (fga - fgm) * (1 - 1.07 * team_orb_pct)
+        ft_x_poss = ((1 - (ftm / fta))**2) * 0.4 * fta
+
+        tot_poss = scr_poss + fg_x_poss + ft_x_poss + tov
+
+        pprod_fg_part = 2 * (fgm + 0.5 * threes) * (1 - 0.5 * ((pts - ftm) / (2 * fga)) * q_ast)
+        pprod_ast_part = 2 * ((team_fgm - fgm + 0.5 * (team_3pm - threes)) / (team_fgm - fgm)) * 0.5 * (((team_pts - team_ftm) - (pts - ftm)) / (2 * (team_fga - fga))) * ast
+        pprod_orb_part = orb * team_orb_weight * team_play_pct * (team_pts / (team_fgm + (1 - (1 - (team_ftm / team_fta))**2) * 0.4 * team_fta))
+
+        pprod = (pprod_fg_part + pprod_ast_part + ftm) * (1 - (team_orb / team_scoring_poss) * team_orb_weight * team_play_pct) + pprod_orb_part
+
+        ortg = 100 * pprod / tot_poss
+
+        return ortg
+
+    def usage(self, game):
+
+        box_score = game.player_boxscore(self)
+        team = game.player_team(self)
+        team_stats = team.stats(game)['teamStats']
+
+        fga = box_score['fieldGoals']['attempted']
+        fta = box_score['freeThrows']['attempted']
+        tov = box_score['turnovers']
+        mp = box_score['totalSecondsPlayed'] / 60.0
+
+        team_fga = team_stats['fieldGoals']['attempted']
+        team_fta = team_stats['freeThrows']['attempted']
+        team_tov = team_stats['turnovers']['total']
+        team_mp = team_stats['minutes']
+
+        usg = 100 * ((fga + 0.44 * fta + tov) * (team_mp / 5)) / (mp * (team_fga + 0.44 * team_fta + team_tov))
+
+        return usg

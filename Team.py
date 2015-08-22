@@ -1,5 +1,7 @@
 from network import teams
 
+import Game
+
 class NoCollectionError(Exception):
 
     def __init__(self, msg):
@@ -92,3 +94,27 @@ class Team:
             return game.away_ortg
         else:
             raise TeamDataError('{} did not participate in {}'.format(self, game))
+
+    def days_rest(self, season, game):
+
+        games_played = season.get_team_games_in_range(self, end_date=game.date)
+
+        if len(games_played) < 2:
+            return 5
+
+        last_game_played = games_played[-2]
+
+        days_rest = (game.date - last_game_played.date).days
+
+        return days_rest
+
+    def is_player_on_team(self, player, game):
+
+        try:
+            team = game.player_team(player)
+            if self == team:
+                return True
+            else:
+                return False
+        except Game.GameDataError:
+            return False

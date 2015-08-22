@@ -45,7 +45,7 @@ def get_games(date, output_file=None):
 
     return game_ids
 
-def get_all_data(start_date, end_date, source='cnn'):
+def get_all_data(start_date, end_date):
 
     try:
         os.mkdir('./json_data')
@@ -57,10 +57,11 @@ def get_all_data(start_date, end_date, source='cnn'):
     except OSError as os_err:
         print os_err
 
-
     date_list = [start_date + dt.timedelta(days=x) for x in range(0, (end_date - start_date).days)]
     if dt.date(2014, 2, 16) in date_list:
         date_list.remove(dt.date(2014, 2, 16))
+    if dt.date(2015, 2, 15) in date_list:
+        date_list.remove(dt.date(2015, 2, 15))
 
     for game_day in date_list:
         print 'Processing game day', game_day
