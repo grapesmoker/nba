@@ -47,30 +47,7 @@ team_to_espn_ids = {'Hawks': 1,
                     'Bobcats': 74}
 
 
-    
 
-
-def game_stats_by_lineup(game_id, team_id, stats_team_id, stats):
-
-    lineups = lineup_combinations(game_id, team_id)
-
-    stats_by_lineup = []
-    
-    for i, lineup in enumerate(lineups):
-        time_on_floor = multiple_player_overlap_improved(game_id, lineup)[0]
-        if time_on_floor != []:
-            stat_dict = {}
-            for stat in stats:
-                if stat == 'efg':
-                    efg, total_made, total_threes, total_attempts = game_stats_by_time(game_id, stats_team_id, time_on_floor, stat)
-                    stat_dict['efg'] = efg
-                    stat_dict['total_made'] = total_made
-                    stat_dict['total_threes'] = total_threes
-                    stat_dict['total_attempts'] = total_attempts
-
-            stats_by_lineup.append({'lineup': lineup, 'tof': time_on_floor, 'stats': stat_dict})
-
-    return stats_by_lineup
 
 def used_lineup(lineup, used_lineups):
 
@@ -90,7 +67,7 @@ def identical_lineups(l1, l2):
             return False
 
     for j in l2:
-        if j not in l2:
+        if j not in l1:
             return False
 
     return True
@@ -206,107 +183,6 @@ def compute_ts_length(ts):
         seconds += td.total_seconds()
 
     return seconds
-
-
-
-def multiple_player_overlap(game_id, players_on, players_off=None):
-
-    # returns the times during which the players in players_on are on court
-    # and the players in players_off are off court
-
-    player_times_on = []
-
-    used_pairs = []
-    for player1, player2 in product(players_on, players_on):
-        if player1 != player2 and (player1, player2) not in used_pairs:
-            t = player_overlap(player1, player2, game_id)
-            player_times_on.append(t)
-
-            #fn1, ln1 = look_up_player_name(player1)
-            #fn2, ln2 = look_up_player_name(player2)
-            #print fn1, ln1, 'and', fn2, ln2
-            #for i in t:
-            #    print map(str, i)
-                
-            used_pairs.append((player1, player2))
-            used_pairs.append((player2, player1))
-
-    print player_times_on
-
-    used_pairs = []
-    shared_times = []
-
-    
-    #for ts1, ts2 in product(player_times_on, player_times_on):
-    #    if ts1 != ts2 and (ts1, ts2) not in used_pairs:
-    #        t = timestream_overlap(ts1, ts2)
-    #        shared_times += t
-    #        used_pairs.append((ts1, ts2))
-    #        used_pairs.append((ts2, ts1))
-
-    shared_times = merge_timestream(player_times_on)
-    for i in range(len(players_on) - 3):
-        shared_times = merge_timestream(shared_times)
-
-    shared_times = [item for sublist in shared_times for item in sublist]
-    shared_times = sorted(map(tuple, pylab.unique(shared_times).tolist()), reverse=True)
-
-    return shared_times
-
-def game_stats_by_time(game_id, team_id, timestream, stat):
-
-    game = pbp.find_one({'playbyplay.contest.id': str(game_id)})
-    plays = [play for play in game['playbyplay']['plays']['play'] if play['team-id-1'] == str(team_id)]
-    
-    int_plays = get_plays_in_intervals(plays, timestream)
-
-    if stat == 'efg':
-        made_shots_coords, missed_shots_coords = filter_missed_made(int_plays)
-        total_made = len(made_shots_coords)
-        total_missed = len(missed_shots_coords)
-        total_attempts = total_made + total_missed
-        total_threes = len([shot for shot in made_shots_coords if is_shot_three(shot['x'], shot['y'])])
-        if total_attempts > 0:
-            efg = 100 * (total_made + 0.5 * total_threes) / total_attempts
-        else:
-            efg = 0
-
-        return efg, total_made, total_threes, total_attempts
-
-
-def player_overlap (player1_id, player2_id, game_id):
-
-    p1_times = player_time_on_court(game_id, player1_id)
-    p2_times = player_time_on_court(game_id, player2_id)
-
-    return timestream_overlap(p1_times, p2_times)
-
-
-def is_play_in_some_interval(play, intervals):
-
-    for interval in intervals:
-        if is_play_in_interval(play, interval):
-            return True
-
-    return False
-
-def get_plays_not_in_intervals (plays, intervals):
-
-    return [play for play in plays if not is_play_in_some_interval(play, intervals)]
-
-def filter_missed_made(plays):
-
-    shooting_plays = [play for play in plays
-                      if 'Shot' in play['detail-desc'] 
-                      and play['x-coord'] != '' 
-                      and play['y-coord'] != '']
-    made_shots = [play for play in shooting_plays if 'Made' in play['event-desc']]
-    missed_shots = [play for play in shooting_plays if 'Missed' in play['event-desc']]
-
-    made_shots_coords = [{'x': float(shot['x-coord']), 'y': float(shot['y-coord']) + 5.25} for shot in made_shots]
-    missed_shots_coords = [{'x': float(shot['x-coord']), 'y': float(shot['y-coord'])+ 5.25} for shot in missed_shots]
-
-    return made_shots_coords, missed_shots_coords
 
 
 def cumulative_team_stats (team_id):
@@ -555,40 +431,7 @@ def construct_odds_csv(input_filename, output_filename):
         output_lines.append(line)
 
 
-def get_player_boxscores(game_id):
 
-    game = boxscores.find_one({'boxscore.meta.contest.id': game_id})
-
-    home_players = game['boxscore']['player-stats']['team'][0]['players']['player']
-    away_players = game['boxscore']['player-stats']['team'][1]['players']['player']
-
-    return home_players, away_players
-
-def cluster_teams_offense(output_filename):
-
-    all_teams = teams.find(timeout=False)
-    writer = csv.writer(open(output_filename, 'w'))
-    
-    all_features = []
-    
-    for team in all_teams:
-        print 'Generating features for {0} {1}'.format(team['city'], team['name'])
-
-        features = team_ocluster_features(team['id'])
-        writer.writerow(features)
-
-def cluster_teams_defense(output_filename):
-
-    all_teams = teams.find(timeout=False)
-    writer = csv.writer(open(output_filename, 'w'))
-    
-    all_features = []
-    
-    for team in all_teams:
-        print 'Generating features for {0} {1}'.format(team['city'], team['name'])
-
-        features = team_dcluster_features(team['id'])
-        writer.writerow(features)
 
 
 def compare_players_offense(p1, p2, weights=None):

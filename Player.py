@@ -1,16 +1,11 @@
 from __future__ import division
 
 import datetime as dt
+import numpy as np
 
 from settings import players
-
-from utils import play_time
-
-# play_time, check_time_consistency, create_shot_chart
-
-#from Game import Game
-
-import Game
+from drawing.player_shot_charts import create_shot_chart
+from Boxscore import PlayerBoxscore
 
 class Player:
 
@@ -54,6 +49,10 @@ class Player:
         else:
             return 1
 
+    def __hash__(self):
+
+        return hash('{}{}{}'.format(self.first_name, self.last_name, self._id))
+
     def check_time_consistency(self, times_subbed_in, times_subbed_out):
 
         consistent = True
@@ -73,14 +72,6 @@ class Player:
         return consistent
 
     def time_on_court(self, game):
-
-        if isinstance(game, int):
-            game = Game.Game(event_id=game)
-        elif isinstance(game, Game.Game):
-            pass
-        else:
-            raise TypeError('Incorrect type for game!')
-
 
         plays_subbed_in = [event for event in game.events if event.play_text.find('Substitution:') > -1
                            and event.players[0] == self]
@@ -148,99 +139,84 @@ class Player:
 
         return time_stream
 
-    def player_shot_chart(self, game_id, **kwargs):
+    def minutes_played(self, game):
 
-        game = Game.Game(pbp, game_id)
+        box_score = PlayerBoxscore(game.player_boxscore(self))
+        return box_score.total_seconds_played / 60.0
 
-        player_plays = game.events_by_player(player_id)
+    def made_shots(self, game):
+
+        return [event for event in game.events
+                if event.is_field_goal_made and event.players[0] == self]
+
+    def missed_shots(self, game):
+
+        return [event for event in game.events
+                if event.is_field_goal_missed and event.players[0] == self]
 
 
-        made_shots = [play['shotCoordinates'] for play in player_plays if 
-                      play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Made']
-        missed_shots = [play['shotCoordinates'] for play in player_plays if
-                        play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Missed']
+    def shot_chart(self, game, **kwargs):
 
-        made_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y']) + 5.25} for shot in made_shots]
-        missed_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y'])+ 5.25} for shot in missed_shots]
+        made_shots = self.made_shots(game)
+        missed_shots = self.missed_shots(game)
 
-        #print made_shots_coords
-        #print missed_shots_coords
-
-        if 'return' in kwargs:
-            if kwargs['return'] == True:
-                return made_shots_coords, missed_shots_coords
-            else:
-                kwargs['plot'] = True
+        if 'plot_type' in kwargs:
+            plot_type = kwargs['plot_type']
         else:
-            kwargs['plot'] = True
+            plot_type = 'hexbin'
+        if 'hex_size' in kwargs:
+            hex_size = kwargs['hex_size']
+        else:
+            hex_size = 1
+        if 'overplot_shots' in kwargs:
+            overplot_shots = kwargs['overplot_shots']
+        else:
+            overplot_shots = False
 
-        if 'plot' in kwargs:
-            if 'plot_type' in kwargs:
-                plot_type = kwargs['plot_type']
-            else:
-                plot_type = 'hexbin'
-            if 'hex_size' in kwargs:
-                hex_size = kwargs['hex_size']
-            else:
-                hex_size = 1
-            if 'overplot_shots' in kwargs:
-                overplot_shots = kwargs['overplot_shots']
-            else:
-                overplot_shots = False
+        gd = game.date
+        team1_name = game.home_team.nickname
+        team2_name = game.away_team.nickname
+        first_name, last_name = self.first_name, self.last_name
 
-            gd = dt.datetime.strftime(game.date, '%Y-%m-%d')
-            team1_name = game.home_team['nickname']
-            team2_name = game.away_team['nickname']
-            
-            first_name, last_name = look_up_player_name(player_id)
+        create_shot_chart(made_shots, missed_shots,
+                          'plots/players/{}_{}_shots_{}_{}_vs_{}.pdf'.format(first_name, last_name, gd, team1_name, team2_name),
+                          '{} {} on {} - {} vs {}'.format(first_name, last_name, gd, team1_name, team2_name),
+                          plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)
 
-            create_shot_chart(made_shots_coords, missed_shots_coords,
-                              'plots/players/{}_{}_shots_{}_{}_vs_{}.pdf'.format(first_name, last_name, gd, team1_name, team2_name),
-                              '{} {} on {} - {} vs {}'.format(first_name, last_name, gd, team1_name, team2_name),
-                              plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)
+    def multi_game_shot_chart(self, games, **kwargs):
 
-    def check_sub_times_consistency(player_id):
+        made_shots = []
+        missed_shots = []
 
-        games_played = games_played_pbp(player_id)
-        fn, ln = player_name(player_id)
+        start_date = None
+        end_date = None
+        for game in games:
+            if game.player_in_game(self):
+                if not start_date:
+                    start_date = game.date
+                end_date = game.date
+                made_shots = np.concatenate((made_shots, self.made_shots(game)))
+                missed_shots = np.concatenate((missed_shots, self.missed_shots(game)))
 
-        for game in games_played:
-            game_id = int(game['playbyplay']['contest']['id'])
-            times_subbed_in, times_subbed_out = player_time_on_court(game_id, player_id, return_type='separate')
+        if 'plot_type' in kwargs:
+            plot_type = kwargs['plot_type']
+        else:
+            plot_type = 'hexbin'
+        if 'hex_size' in kwargs:
+            hex_size = kwargs['hex_size']
+        else:
+            hex_size = 1
+        if 'overplot_shots' in kwargs:
+            overplot_shots = kwargs['overplot_shots']
+        else:
+            overplot_shots = False
 
-            consistent = True
+        first_name, last_name = self.first_name, self.last_name
 
-            if len(times_subbed_in) == len(times_subbed_out) or len(times_subbed_in) == len(times_subbed_out) + 1:
-                for ti, to in zip(times_subbed_in, times_subbed_out):
-                    if ti < to:
-                        consitent = False
-            else:
-                consistent = False
-
-            team1, team1_id, team2, team2_id = game_teams(game_id)
-
-            print 'player: {}, game_id: {}, game: {}, date: {}, consistent times: {}'.format(' '.join((fn, ln)),
-                                                                                             game_id,
-                                                                                             ' vs '.join((team1, team2)),
-                                                                                             game_day(game_id),
-                                                                                             consistent)
-            game_boxscore = boxscores.find_one({'boxscore.contest.id': game_id})
-            player_boxscore = [pbx for pbx in game_boxscore['boxscore']['player-stats']['team'][0]['players']['player']
-                               if pbx['id'] == int(player_id)] + \
-                               [pbx for pbx in game_boxscore['boxscore']['player-stats']['team'][1]['players']['player']
-                                if pbx['id'] == int(player_id)]
-
-            boxscore_seconds = player_boxscore[0]['total-seconds']['seconds']
-            calc_seconds = 0
-            for ti, to in zip(times_subbed_in, times_subbed_out):
-                td = ti - to
-                calc_seconds += td.total_seconds()
-
-            print 'Boxscore seconds: {}'.format(boxscore_seconds)
-            print 'Calculated seconds: {}'.format(calc_seconds)
-
-            if abs(boxscore_seconds - calc_seconds) > 120:
-                print 'Discrepancy of {}s'.format(abs(boxscore_seconds - calc_seconds))
+        create_shot_chart(made_shots, missed_shots,
+                          'plots/players/{}_{}_shots_from_{}_to_{}.pdf'.format(first_name, last_name, start_date, end_date),
+                          '{} {} from {} to {}'.format(first_name, last_name, start_date, end_date),
+                          plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)
 
     def drtg(self, game):
 

@@ -3,10 +3,9 @@ __author__ = 'jerry'
 import datetime as dt
 
 from settings import pbp
-from utils import play_time
 
 from Player import Player
-
+from scipy.spatial.distance import euclidean
 
 class Event:
 
@@ -51,9 +50,21 @@ class Event:
     def shot_coordinates(self):
         coords = self._play_data['shotCoordinates']
         if coords != {}:
-            return coords['x'], coords['y']
+            return coords['x'], coords['y'] + 5.25
         else:
             return None
+
+    @property
+    def shot_x(self):
+        coords = self._play_data['shotCoordinates']
+        if coords != {}:
+            return coords['x']
+
+    @property
+    def shot_y(self):
+        coords = self._play_data['shotCoordinates']
+        if coords != {}:
+            return coords['y'] + 5.25
 
     @property
     def id(self):
@@ -144,6 +155,18 @@ class Event:
         return self.play_type_id == self.__class__._event_ids['Timeout']
 
     @property
+    def is_three_pointer(self):
+        x, y = self.shot_coordinates
+        if euclidean((x, y), (0, 5.25)) > 23.75:
+            return True
+        else:
+            if abs(y) <= 14.0 and abs(x) >= 22.0:
+                return True
+            else:
+                return False
+
+
+    @property
     def shot_made_by(self):
         if self.is_field_goal_made:
             return self.players[0]
@@ -165,6 +188,13 @@ class Event:
             return None
 
     @property
+    def turned_over_by(self):
+        if self.is_turnover and len(self.players) >= 1:
+            return self.players[0]
+        else:
+            return None
+
+    @property
     def stolen_by(self):
         if self.is_turnover and len(self.players) == 2:
             return self.players[1]
@@ -173,7 +203,7 @@ class Event:
 
     @property
     def rebounded_by(self):
-        if self.is_dreb or self.is_oreb:
+        if (self.is_dreb or self.is_oreb) and len(self.players) >= 1:
             return self.players[0]
         else:
             return None
@@ -186,12 +216,10 @@ class Event:
             return None
 
     @property
-    def free_throw_made_by(self):
+    def free_throw_missed_by(self):
         if self.is_free_throw_missed:
             return self.players[0]
         else:
             return None
-
-
 
 

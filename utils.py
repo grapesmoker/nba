@@ -15,11 +15,10 @@ def is_shot_three(x, y):
     if euclidean((x, y), (0, 5.25)) > 23.75:
         return True
     else:
-        if abs(x) > 14.0:
+        if abs(y) <= 14.0 and abs(x) >= 22.0:
             return True
         else:
             return False
-
 
 def format_date(d, source='SI'):
 
@@ -211,3 +210,12 @@ def timestream_overlap(ts1, ts2):
                 overlap_time.append(overlap)
 
     return overlap_time
+
+def compute_ts_length(ts):
+
+    seconds = 0
+    for ti, to in ts:
+        td = ti - to
+        seconds += td.total_seconds()
+
+    return seconds

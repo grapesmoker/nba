@@ -97,13 +97,13 @@ class Game:
         away_players = [Player(id) for id in away_player_ids]
         return away_players
 
-    def game_players(self, team_id):
-        if self._home_team['teamId'] == team_id:
+    def game_players(self, team):
+        if self.home_team == team:
             return self.home_players
-        elif self._away_team['teamId'] == team_id:
+        elif self.away_team == team:
             return self.away_players
         else:
-            raise GameDataError('No such teamId ({0}) for this game!'.format(team_id))
+            raise GameDataError('No such team: ({0}) for this game!'.format(team))
 
     @property
     def pbp(self):
@@ -130,13 +130,13 @@ class Game:
             raise GameDataError('{} did not participate in {}'.format(team, self))
 
     def is_home(self, team):
-        if self.home_boxscore['teamId'] == team.id:
+        if self.home_team == team:
             return True
         else:
             return False
 
     def is_away(self, team):
-        if self.away_boxscore['teamId'] == team.id:
+        if self.away_team == team:
             return True
         else:
             return False
@@ -299,19 +299,24 @@ class Game:
         else:
             raise GameDataError('{} did not participate in {}'.format(team, self))
 
-    def lineup_combinations(self, team_id):
-        players = self.game_players(team_id)
+    def lineup_combinations(self, team):
+        players = [player for player in self.game_players(team) if player.minutes_played(self) > 0]
         return combinations(players, 5)
 
-    def events_by_player(self, player_id):
-        
-        def is_player_involved(event, player_id):
-            for player in event['players']:
-                if player['playerId'] == player_id:
-                    return True
-            return False
+    def time_by_lineup(self, players):
 
-        player_events = [event for event in self._pbp if is_player_involved(event, player_id)]
+        team = self.player_team(players[0])
+        for player in players[1:]:
+            if not team.is_player_on_team(player, self):
+                raise GameDataError('All players must be on the same team!')
+
+        timestream = self.multiple_player_overlap(players)
+
+        return timestream
+
+    def events_by_player(self, player):
+
+        player_events = [event for event in self.events if player in event.players]
 
         return player_events
 
@@ -372,13 +377,17 @@ class Game:
 
         player_times = [player.time_on_court(self) for player in players_on]
 
-        shared_times = recursive_intersect(player_times)
+        shared_times = recursive_intersect(player_times)[0]
 
         return shared_times
 
     def events_in_interval(self, interval):
 
-        return sorted([event for event in self.events if interval[1] < event.play_time < interval[0]])
+        return sorted([event for event in self.events if interval[1] <= event.play_time <= interval[0]])
+
+    def events_not_in_interval(self, interval):
+
+        return sorted([event for event in self.events if not interval[1] <= event.play_time <= interval[0]])
 
     def events_in_intervals(self, intervals):
 
@@ -386,7 +395,7 @@ class Game:
         for interval in intervals:
             all_plays += self.events_in_interval(interval)
 
-        return sorted(all_plays)
+        return sorted(all_plays, reverse=True)
 
     def __cmp__(self, other):
         if self.date == other.date:
@@ -405,17 +414,83 @@ class Game:
             # we only care about plays that actually accrue counting stats
             if event.is_field_goal_made:
                 player = event.shot_made_by
-                if team.is_player_on_team(player):
+                opponent = self.opponent(team)
+                if team.is_player_on_team(player, self):
                     assister = event.assisted_by
-                    team_box_score.points += 2
+                    if event.is_three_pointer:
+                        team_box_score.points += 3
+                        team_box_score.three_point_field_goals_attempted += 1
+                        team_box_score.three_point_field_goals_made += 1
+                    else:
+                        team_box_score.points += 2
+
                     team_box_score.field_goals_made += 1
                     team_box_score.field_goals_attempted += 1
                     if assister:
                         team_box_score.assists += 1
+                elif opponent.is_player_on_team(player, self):
+                    if event.is_three_pointer:
+                        team_box_score.points_against += 3
+                    else:
+                        team_box_score.points_against += 2
 
             elif event.is_field_goal_missed:
                 player = event.shot_missed_by
-                if team.is_player_on_team(player):
+                if team.is_player_on_team(player, self):
+                    if event.is_three_pointer:
+                        team_box_score.three_point_field_goals_attempted += 1
                     team_box_score.field_goals_attempted += 1
-                    team_box_score.field_goals_missed += 1
+
+            elif event.is_free_throw_made:
+                player = event.free_throw_made_by
+                opponent = self.opponent(team)
+                if team.is_player_on_team(player, self):
+                    team_box_score.points += 1
+                    team_box_score.free_throws_made += 1
+                    team_box_score.free_throws_attempted += 1
+                elif opponent.is_player_on_team(player, self):
+                    team_box_score.points_against += 1
+
+            elif event.is_free_throw_missed:
+                player = event.free_throw_missed_by
+                if team.is_player_on_team(player, self):
+                    team_box_score.points += 1
+                    team_box_score.free_throws_made += 1
+                    team_box_score.free_throws_attempted += 1
+
+            elif event.is_oreb:
+                player = event.rebounded_by
+                if player and team.is_player_on_team(player, self):
+                    team_box_score.rebounds_offensive += 1
+
+            elif event.is_dreb:
+                player = event.rebounded_by
+                if player and team.is_player_on_team(player, self):
+                    team_box_score.rebounds_defensive += 1
+
+            elif event.is_turnover:
+                player = event.turned_over_by
+                stolen_by = event.stolen_by
+                if team.is_player_on_team(player, self):
+                    team_box_score.turnovers_total += 1
+                elif stolen_by and team.is_player_on_team(stolen_by, self):
+                    team_box_score.steals += 1
+
+        return team_box_score
+
+    def stats_by_lineup(self, players):
+        # all players are assumed to be on the same team
+        # if this is not the case, bail
+        team = self.player_team(players[0])
+        for player in players[1:]:
+            if not team.is_player_on_team(player, self):
+                raise GameDataError('All players must be on the same team!')
+
+        timestream = self.multiple_player_overlap(players)
+
+        box_score = self.team_stats_by_time(team, timestream)
+
+        return box_score
+
+
 

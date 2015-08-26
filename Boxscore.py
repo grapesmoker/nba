@@ -60,6 +60,7 @@ empty_team_boxscore = {
     'flagrantFouls': 0,
     'biggestLead': 0,
     'points': 0,
+    'pointsAgainst': 0,
     'minutes': 0,
 }
 
@@ -129,6 +130,9 @@ class Boxscore(dict):
             else:
                 raise TypeError('Unknown type encountered in JSON!')
 
+    def add_dicts(self_dict, other_dict):
+        pass
+
 
 class PlayerBoxscore(Boxscore):
 
@@ -139,6 +143,23 @@ class PlayerBoxscore(Boxscore):
 
         super(PlayerBoxscore, self).__init__(data)
 
+    def __add__(self, other):
+
+        if isinstance(self, PlayerBoxscore) and isinstance(other, PlayerBoxscore):
+            retval = PlayerBoxscore(empty_player_boxscore)
+            for key in self.__dict__:
+                newval = getattr(self, key)
+                if key == 'player_player_id':
+                    setattr(retval, key, newval)
+                elif isinstance(newval, int) or isinstance(newval, float):
+                    newval += getattr(other, key)
+                    setattr(retval, key, newval)
+                elif isinstance(newval, str):
+                    setattr(retval, key, newval)
+            return retval
+        else:
+            raise NotImplementedError()
+
 
 class TeamBoxscore(Boxscore):
 
@@ -148,3 +169,20 @@ class TeamBoxscore(Boxscore):
             data = empty_team_boxscore
 
         super(TeamBoxscore, self).__init__(data)
+
+    def __add__(self, other):
+
+        if isinstance(self, TeamBoxscore) and isinstance(other, TeamBoxscore):
+            retval = TeamBoxscore(empty_team_boxscore)
+            for key in self.__dict__:
+                newval = getattr(self, key)
+                if key == 'player_player_id':
+                    setattr(retval, key, newval)
+                elif isinstance(newval, int) or isinstance(newval, float):
+                    newval += getattr(other, key)
+                    setattr(retval, key, newval)
+                elif isinstance(newval, str):
+                    setattr(retval, key, newval)
+            return retval
+        else:
+            raise NotImplementedError()

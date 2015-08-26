@@ -40,6 +40,16 @@ class Team:
     def get_by_team_id(self, team_id):
 
         self._data = self._coll.find_one({'id': team_id})
+
+    def __cmp__(self, other):
+
+        if self.id == other.id and self.nickname == other.nickname:
+            return 0
+        elif self.nickname < other.nickname:
+            return -1
+        elif self.nickname > other.nickname:
+            return 1
+
         
     @property
     def location(self):

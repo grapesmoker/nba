@@ -1,5 +1,9 @@
 __author__ = 'jerry'
 
+import numpy as np
+
+from scipy.spatial.distance import euclidean
+
 from matplotlib.patches import Arc, RegularPolygon, Circle
 from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
 from matplotlib.colorbar import ColorbarBase
@@ -11,7 +15,7 @@ def create_hexes(s=2):
     xf = range(-30, 30)
     yf = range(-30, 30)
 
-    r = s * pylab.sqrt(3) / 2.0
+    r = s * np.sqrt(3) / 2.0
     h = 0.5 * s
 
     grid_points = [(x, y) for x in xf for y in yf]
@@ -25,27 +29,27 @@ def create_hexes(s=2):
 
     return hexes
 
-def find_hex_from_xy(hexes, x, y, r=1.732):
+# def find_hex_from_xy(hexes, x, y, r=1.732):
+#
+#     # not a good way of doing things
+#     # if you are within a distance r of the center, you're good
+#     nearest_dist = 10
+#     nearest_cell = None
+#
+#     for cell in hexes:
+#         dist = euclidean((x, y), (cell['x'], cell['y']))
+#         if dist < r:
+#             return cell
+#         else:
+#             if dist < nearest_dist:
+#                 nearest_dist = dist
+#                 nearest_cell = cell
+#
+#     return nearest_cell
 
-    # not a good way of doing things
-    # if you are within a distance r of the center, you're good
-    nearest_dist = 10
-    nearest_cell = None
+def find_hex_from_xy(hexes, x, y, s=2):
 
-    for cell in hexes:
-        dist = euclidean((x, y), (cell['x'], cell['y']))
-        if dist < r:
-            return cell
-        else:
-            if dist < nearest_dist:
-                nearest_dist = dist
-                nearest_cell = cell
-
-    return nearest_cell
-
-def find_hex_from_xy_improved(hexes, x, y, s=2):
-
-    r = s * pylab.sqrt(3) / 2.0
+    r = s * np.sqrt(3) / 2.0
 
     candidates = [cell for cell in hexes if abs(cell['x'] - x) < s and abs(cell['y'] - y) < s]
 

@@ -1,32 +1,41 @@
+from __future__ import division
+
 __author__ = 'jerry'
 
-def plot_player_shots(first_name, last_name, plot_type='hexbin', start_date=dt.date(2012, 11, 22), end_date = dt.date(2013, 4, 13), hex_size=2):
+import numpy as np
+import os
+import matplotlib.pyplot as mpl
 
-    player = players.find_one({'first-name': first_name, 'last-name': last_name})
-    player_id = str(player['id'])
+from scipy.spatial.distance import euclidean
+from scipy.interpolate import spline
 
-    games_played = pbp.find({'playbyplay.plays.play.player1-id': player_id})
+from matplotlib import gridspec
+from matplotlib.patches import Arc, RegularPolygon, Circle
+from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
+from matplotlib.colorbar import ColorbarBase
+
+from court import draw_court
+from hexes import create_hexes, find_hex_from_xy
+from utils import is_shot_three
+
+def plot_player_shots(player, games, plot_type='hexbin', hex_size=2):
 
     made_shots_coords = []
     missed_shots_coords = []
 
-    for i, game in enumerate(games_played):
-        gd = game_day(int(game['playbyplay']['contest']['id']), type='datetime')
-        if gd > start_date and gd < end_date:
-            plays = game['playbyplay']['plays']['play']
-            player_plays = [play for play in plays if play['player1-id'] == player_id]
-            shooting_plays = [play for play in player_plays
-                              if 'Shot' in play['detail-desc']
-                              and play['x-coord'] != ''
-                              and play['y-coord'] != '']
-            made_shots = [play for play in shooting_plays if 'Made' in play['event-desc']]
-            missed_shots = [play for play in shooting_plays if 'Missed' in play['event-desc']]
+    for i, game in enumerate(games):
 
-            made_shots_coords = pylab.concatenate((made_shots_coords,
+        shooting_plays = [event for event in game.events
+                          if event.is_field_goal_made or event.is_field_goal_missed]
+
+        made_shots = [play for play in shooting_plays if 'Made' in play['event-desc']]
+        missed_shots = [play for play in shooting_plays if 'Missed' in play['event-desc']]
+
+        made_shots_coords = np.concatenate((made_shots_coords,
                                                    [{'x': float(shot['x-coord']), 'y': float(shot['y-coord']) + 5.25}
                                                     for shot in made_shots]))
 
-            missed_shots_coords = pylab.concatenate((missed_shots_coords,
+        missed_shots_coords = np.concatenate((missed_shots_coords,
                                                     [{'x': float(shot['x-coord']), 'y': float(shot['y-coord']) + 5.25}
                                                      for shot in missed_shots]))
 
@@ -35,77 +44,26 @@ def plot_player_shots(first_name, last_name, plot_type='hexbin', start_date=dt.d
                       '{0} {1}'.format(first_name, last_name), hex_size=hex_size)
 
 
+def create_shot_chart(made_shots, missed_shots, filename, title, plot_type='hexbin', hex_size=2, **kwargs):
 
-def player_shot_chart(game_id, player_id, **kwargs):
+    made_x = np.array([shot.shot_x for shot in made_shots])
+    made_y = np.array([shot.shot_y for shot in made_shots])
+    missed_x = np.array([shot.shot_x for shot in missed_shots])
+    missed_y = np.array([shot.shot_y for shot in missed_shots])
 
-    game = None #GameEvent(pbp, game_id)
-
-    player_plays = game.events_by_player(player_id)
-
-
-    made_shots = [play['shotCoordinates'] for play in player_plays if
-                  play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Made']
-    missed_shots = [play['shotCoordinates'] for play in player_plays if
-                    play['playEvent'].has_key('name') and play['playEvent']['name'] == 'Field Goal Missed']
-
-    made_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y']) + 5.25} for shot in made_shots]
-    missed_shots_coords = [{'x': float(shot['x']), 'y': float(shot['y'])+ 5.25} for shot in missed_shots]
-
-    #print made_shots_coords
-    #print missed_shots_coords
-
-    if 'return' in kwargs:
-        if kwargs['return'] == True:
-            return made_shots_coords, missed_shots_coords
-        else:
-            kwargs['plot'] = True
-    else:
-        kwargs['plot'] = True
-    if 'plot' in kwargs:
-        if 'plot_type' in kwargs:
-            plot_type = kwargs['plot_type']
-        else:
-            plot_type = 'hexbin'
-        if 'hex_size' in kwargs:
-            hex_size = kwargs['hex_size']
-        else:
-            hex_size = 1
-        if 'overplot_shots' in kwargs:
-            overplot_shots = kwargs['overplot_shots']
-        else:
-            overplot_shots = False
-
-        gd = dt.datetime.strftime(game.date, '%Y-%m-%d')
-        team1_name = game.home_team['nickname']
-        team2_name = game.away_team['nickname']
-
-        first_name, last_name = look_up_player_name(player_id)
-
-        create_shot_chart(made_shots_coords, missed_shots_coords,
-                          'plots/players/{}_{}_shots_{}_{}_vs_{}.pdf'.format(first_name, last_name, gd, team1_name, team2_name),
-                          '{} {} on {} - {} vs {}'.format(first_name, last_name, gd, team1_name, team2_name),
-                          plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)
-
-def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, plot_type='hexbin', hex_size=2, **kwargs):
-
-    made_x = pylab.array([shot['x'] for shot in made_shots_coords])
-    made_y = pylab.array([shot['y'] for shot in made_shots_coords])
-    missed_x = pylab.array([shot['x'] for shot in missed_shots_coords])
-    missed_y = pylab.array([shot['y'] for shot in missed_shots_coords])
-
-    num_made = float(len(made_shots_coords))
-    num_missed = float(len(missed_shots_coords))
+    num_made = float(len(made_shots))
+    num_missed = float(len(missed_shots))
 
     frac_made = 100 * (num_made / (num_made + num_missed))
     frac_missed = 100 - frac_made
 
-    shot_distances_made = [euclidean(shot['x'], shot['y']) for shot in made_shots_coords]
-    shot_distances_missed = [euclidean(shot['x'], shot['y']) for shot in missed_shots_coords]
+    shot_distances_made = [euclidean(shot.shot_x, shot.shot_y) for shot in made_shots]
+    shot_distances_missed = [euclidean(shot.shot_x, shot.shot_y) for shot in missed_shots]
 
-    bins = pylab.linspace(0, 50, 26)
+    bins = np.linspace(0, 50, 26)
 
-    frac_made_arr = pylab.zeros(len(bins))
-    shots_taken = pylab.zeros(len(bins))
+    frac_made_arr = np.zeros(len(bins))
+    shots_taken = np.zeros(len(bins))
     for i, bin in enumerate(bins[:-1]):
         bin_made = [loc for loc in shot_distances_made if loc > bin and loc < bins[i + 1]]
         bin_missed = [loc for loc in shot_distances_missed if loc > bin and loc < bins[i + 1]]
@@ -120,7 +78,7 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
         ax2 = ax1.twinx()
         # l2 = ax2.plot(bins, shots_taken, 'rs-', label='shots taken')
 
-        smooth_x = pylab.linspace(0, 40, 300)
+        smooth_x = np.linspace(0, 40, 300)
         smooth_made = spline(bins, frac_made_arr * 100, smooth_x)
         smooth_taken = spline(bins, shots_taken, smooth_x)
 
@@ -153,22 +111,15 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
         gs = gridspec.GridSpec(1, 2, width_ratios=[1, 10])
 
         ax_cb = mpl.subplot(gs[0,0])
-        #ax_dist = mpl.subplot(gs[1, 0:])
         ax = mpl.subplot(gs[0,1])
-
-
-        #ax_cb = mpl.subplot2grid((2, 1), (1, 0))
-        #ax = mpl.subplot2grid((2, 1), (0, 0))
-
-        #ax_cb = fig.add_axes([0.05, 0.05, 0.5, 0.025])
-        #ax = fig.add_axes([0.1, 0.1, 0.9, 0.8])
 
         draw_court(ax)
 
         for x, y in zip(made_x, made_y):
-            cell = find_hex_from_xy_improved(hexes, x, y, s=hex_size)
+            cell = find_hex_from_xy(hexes, x, y, s=hex_size)
             if cell is not None:
                 if is_shot_three(x, y):
+                    #print x, y, euclidean((x, y), (0, 0))
                     cell['threes'] += 1
                 cell['made'] += 1
             else:
@@ -176,8 +127,10 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
                 print 'made shot not in cell: ({}, {})'.format(x, y)
 
         for x, y in zip(missed_x, missed_y):
-            cell = find_hex_from_xy_improved(hexes, x, y, s=hex_size)
+            cell = find_hex_from_xy(hexes, x, y, s=hex_size)
             if cell is not None:
+                #if is_shot_three(x, y):
+                #    print x, y, euclidean((x, y), (0, 0))
                 cell['missed'] += 1
             else:
                 ## this should never happen
@@ -190,7 +143,8 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
         max_attempts_frac = 100.0 * max_attempts / total_attempts
         min_attempts_frac = 100.0 * min_attempts / total_attempts
 
-        print max_attempts_frac, min_attempts_frac
+        #print 'max_attempts: {}, min_attempts: {}, total_attempts: {}'.format(max_attempts, min_attempts, total_attempts)
+        #print 'max_attempts_frac: {}, min_attempts_frac: {}'.format(max_attempts_frac, min_attempts_frac)
 
         if 'scale_factor' in kwargs:
             max_attempts_frac = max_attempts_frac * kwargs['scale_factor']
@@ -206,18 +160,14 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
             m = (float(max_size) - min_size) / (max_attempts_frac - 1)
             b = min_size - m
         else:
-            m = max_size
+            m = max_size / max_attempts_frac
             b = 0
 
-        #print m, b, max_size, max_attempts_frac
+        #print 'm: {}, b: {}, max_size: {}, min_size: {}'.format(m, b, max_size, min_size)
 
         cm = mpl.cm.YlOrBr
         norm = Normalize(0, 1.5)
-        #color_scale = pylab.linspace(0, 1.5, 25) / 1.5
-        #colors = cm(color_scale)
-        #cmap = ListedColormap(colors)
 
-        #total_attempts = 0
         total_made = 0
         total_threes = 0
         for cell in hexes:
@@ -234,8 +184,8 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
                 #print size, scaled_attempts, attempts_frac, max_attempts_frac
                 #print size
                 if plot_type == 'hexbin' and not return_cells:
-                    cell['patch'] = RegularPolygon((cell['x'], cell['y']), 6, size, orientation=pylab.pi/6, color=cm(norm(efg)), alpha=0.75)
-                    outline = RegularPolygon((cell['x'], cell['y']), 6, hex_size, orientation=pylab.pi/6, fill=False, color='y', linestyle='dotted')
+                    cell['patch'] = RegularPolygon((cell['x'], cell['y']), 6, size, orientation=np.pi/6, color=cm(norm(efg)), alpha=0.75)
+                    outline = RegularPolygon((cell['x'], cell['y']), 6, hex_size, orientation=np.pi/6, fill=False, color='y', linestyle='dotted')
                     ax.add_patch(cell['patch'])
                     ax.add_patch(outline)
                     if 'print_pct' in kwargs and kwargs['print_pct'] == True:
@@ -244,57 +194,8 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
         if return_cells:
             return hexes
 
-        box = ax.get_position()
-
-        # smooth_x = pylab.linspace(0, 40, 300)
-        # smooth_made = spline(bins, frac_made_arr * 100, smooth_x)
-        # smooth_taken = spline(bins, shots_taken, smooth_x)
-
-        # l1 = ax_dist.plot(smooth_x, smooth_made, 'g-', label='% made')
-        # l2 = ax_dist.plot(smooth_x, smooth_taken, 'r-', label='# shots taken')
-
-        # ax_dist2 = ax_dist.twinx()
-        # ax_dist.set_xlabel('Distance from basket')
-        # ax_dist.set_ylabel('Percentage made')
-        # ax_dist2.set_ylabel('Number of shots taken')
-
-        # lns = l1 + l2
-        # labels = [l.get_label() for l in lns]
-
-        # ax_dist.set_xlim(0, 40)
-        # ax_dist2.set_ylim(0, 40)
-
-        # ax_dist.legend(lns, labels)
-        # ax_dist.grid(True)
-
-        #gs.update(left=0.01, right=0.65, wspace=0.05)
-        #ax.set_position([box.x0 - box.width * 0.1,
-        #                 box.y0 + box.height * 0.1,
-        #                 box.width * 0.75,
-        #                 box.height * 0.9])
-        #ax_cb.set_position([box.x0 - box.width * 0.1,
-        #                    0.01,
-        #                    box.width * 0.75,
-        #                    0.05])
-        #box = ax.get_position()
-
         if plot_type == 'hexbin':
-            #efg_max = 1.0 #max([cell['efg'] for cell in hexes])
-            #efg_min = 0
-            #unique_efg = pylab.array(sorted(pylab.unique([cell['efg'] for cell in hexes])))
-
-            #if efg_max > 1:
-            #    color_scale = unique_efg / efg_max
-            #else:
-            #    color_scale = unique_efg
-
-            #colors = cm(color_scale)
-            #cmap = ListedColormap(colors)
-            #norm = Normalize(vmin=efg_min, vmax=efg_max)
-            #norm = BoundaryNorm(color_scale, cmap.N)
-
             cb = ColorbarBase(ax_cb, cmap=cm, norm=norm, orientation='vertical')
-            #cb.ax.set_yticklabels(unique_efg)
             cb.set_label('Effective Field Goal Percentage')
             mpl.tight_layout()
 
@@ -304,9 +205,9 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
             bin_y = [cell['y'] for cell in hexes]
             efg = [cell['efg'] for cell in hexes]
 
-            xi = pylab.linspace(-25, 25, 200)
-            yi = pylab.linspace(0, 47.5, 200)
-            zi = pylab.griddata(bin_x, bin_y, efg, xi, yi)
+            xi = np.linspace(-25, 25, 200)
+            yi = np.linspace(0, 47.5, 200)
+            zi = np.griddata(bin_x, bin_y, efg, xi, yi)
 
             mpl.contourf(xi, yi, zi, 5, cmap=mpl.cm.YlOrBr)
             mpl.colorbar()
@@ -346,4 +247,7 @@ def create_shot_chart(made_shots_coords, missed_shots_coords, filename, title, p
 
         mpl.show()
 
+    plot_dir = os.path.split(filename)
+    if not os.path.exists(plot_dir[0]):
+        os.makedirs(plot_dir[0])
     mpl.savefig(filename)

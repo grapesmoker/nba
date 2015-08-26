@@ -213,3 +213,29 @@ def cluster_overlap(c1, c2):
     overlap = [p1 for p1 in c1 if p1 in c2]
 
     return overlap
+
+def cluster_teams_offense(output_filename):
+
+    all_teams = teams.find(timeout=False)
+    writer = csv.writer(open(output_filename, 'w'))
+
+    all_features = []
+
+    for team in all_teams:
+        print 'Generating features for {0} {1}'.format(team['city'], team['name'])
+
+        features = team_ocluster_features(team['id'])
+        writer.writerow(features)
+
+def cluster_teams_defense(output_filename):
+
+    all_teams = teams.find(timeout=False)
+    writer = csv.writer(open(output_filename, 'w'))
+
+    all_features = []
+
+    for team in all_teams:
+        print 'Generating features for {0} {1}'.format(team['city'], team['name'])
+
+        features = team_dcluster_features(team['id'])
+        writer.writerow(features)
