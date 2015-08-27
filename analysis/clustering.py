@@ -239,3 +239,146 @@ def cluster_teams_defense(output_filename):
 
         features = team_dcluster_features(team['id'])
         writer.writerow(features)
+
+def compare_players_offense(p1, p2, weights=None):
+
+    if type(p1) == str and type(p2) == str:
+        fn1, ln1 = p1.split()
+        fn2, ln2 = p2.split()
+
+        p1_id = int(look_up_player_id(fn1, ln1))
+        p2_id = int(look_up_player_id(fn2, ln2))
+
+    elif type(p1) == int and type(p2) == int:
+        p1_id = p1
+        p2_id = p2
+
+        fn1, ln1 = look_up_player_name(p1_id)
+        fn2, ln2 = look_up_player_name(p2_id)
+
+    else:
+        return None
+
+    p1_f = player_ocluster_features(p1_id)
+    p2_f = player_ocluster_features(p2_id)
+
+    sim = player_feature_sim(p1_f, p2_f, weights)
+    dist = euclidean(p1_f[1:], p2_f[1:])
+
+    print '{:25}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}'.format('Player', 'AST%', 'TS%', 'ORB%', 'USG%', 'ORTG%', 'MP%')
+    print '{:->85}'.format('')
+    print '{:25}{:10.3}{:10.3}{:10.3}{:10.3}{:10.3f}{:10.3}'.format(' '.join((fn1, ln1)), p1_f[1], p1_f[2], p1_f[3], p1_f[4], p1_f[5], p1_f[6])
+    print '{:25}{:10.3}{:10.3}{:10.3}{:10.3}{:10.3f}{:10.3}'.format(' '.join((fn2, ln2)), p2_f[1], p2_f[2], p2_f[3], p2_f[4], p2_f[5], p2_f[6])
+    #print '{:->85}'.format('')
+    #print '{:25}{:10.3}'.format('Euclidean distance:', dist)
+
+def compare_players_defense(p1, p2, weights=None):
+
+    if type(p1) == str and type(p2) == str:
+        fn1, ln1 = p1.split()
+        fn2, ln2 = p2.split()
+
+        p1_id = int(look_up_player_id(fn1, ln1))
+        p2_id = int(look_up_player_id(fn2, ln2))
+
+    elif type(p1) == int and type(p2) == int:
+        p1_id = p1
+        p2_id = p2
+
+        fn1, ln1 = look_up_player_name(p1_id)
+        fn2, ln2 = look_up_player_name(p2_id)
+
+    else:
+        return None
+
+    p1_f = player_dcluster_features(p1_id)
+    p2_f = player_dcluster_features(p2_id)
+
+    sim = player_feature_sim(p1_f, p2_f, weights)
+    dist = euclidean(p1_f[1:], p2_f[1:])
+
+    print '{:25}{:>10}{:>10}{:>10}{:>10}{:>10}{:>10}'.format('Player', 'BLK%', 'STL%', 'DRB%', 'DRTG', 'PF%', 'MP%')
+    print '{:->85}'.format('')
+    print '{:25}{:10.3}{:10.3}{:10.3}{:10.3f}{:10.3f}{:10.3}'.format(' '.join((fn1, ln1)), p1_f[1], p1_f[2], p1_f[3], p1_f[4], p1_f[5], p1_f[6])
+    print '{:25}{:10.3}{:10.3}{:10.3}{:10.3f}{:10.3f}{:10.3}'.format(' '.join((fn2, ln2)), p2_f[1], p2_f[2], p2_f[3], p2_f[4], p2_f[5], p2_f[6])
+    #print '{:->85}'.format('')
+    #print '{:25}{:10.3}'.format('Euclidean distance:', dist)
+
+def player_feature_sim(p1, p2, weights=None):
+
+    if p1[0] > 1000:
+        p1 = p1[1:]
+    if p2[0] > 1000:
+        p2 = p2[1:]
+
+    if weights is None:
+        weights = pylab.ones(len(p1))
+
+    s = pylab.array([w * ((abs(x - y) / abs(x + y)))**2 for x, y, w in zip(p1, p2, weights)])
+    #s = pylab.array([w * (x + y) / (x * y) for x, y, w in zip(p1, p2, weights)])
+
+    d = pylab.sqrt(pylab.sum(s))
+
+    if pylab.isnan(d):
+        d = 0
+
+    return d
+
+def player_feature_sim_matrix(feature_matrix, feature_weights=None):
+
+    shape = feature_matrix.shape
+    sims = pylab.zeros((shape[0], shape[0]))
+
+    for i, p1 in enumerate(feature_matrix):
+        for j, p2 in enumerate(feature_matrix):
+            sims[i][j] = player_feature_sim(p1, p2, weights=None)
+
+    return sims
+
+
+# for i in range(len(test_subset)):
+#     team1 = test_subset[i]['home_team']
+#     team2 = test_subset[i]['away_team']
+#     margin = test_subset[i]['home_points'] - test_subset[i]['away_points']
+#     pred_margin = test_pred[i]
+#     line = test_line[i]
+#     t1_name = ' '.join(nba.look_up_team_name(team1))
+#     t2_name = ' '.join(nba.look_up_team_name(team2))
+#     if line > 0:
+#         # home are favored
+#         if pred_margin > line:
+#             # I have bet on home
+#             if line > margin:
+#                 status = 'lose'
+#             if line < margin:
+#                 status = 'win'
+#             if line == margin:
+#                 status = 'tie'
+#         if pred_margin < line:
+#             # I have bet on away
+#             if line > margin:
+#                 status = 'win'
+#             if line < margin:
+#                 status = 'lose'
+#             if line == margin:
+#                 status = 'tie'
+#     if line < 0:
+#         # away are favored
+#         if pred_margin < line:
+#             # I have bet on away
+#             if line < margin:
+#                 status = 'lose'
+#             if line > margin:
+#                 status = 'win'
+#             if line == margin:
+#                 status = 'tie'
+#         if pred_margin > line:
+#             # I have bet on home
+#             if line < margin:
+#                 status = 'win'
+#             if line > margin:
+#                 status = 'lose'
+#             if line == margin:
+#                 status = 'tie'
+#     print '{:50} {:>15} {:>25} {:>15} {:>15}'.format(' vs '.join((t1_name, t2_name)), 'line: {: 2.1f}'.format(line), 'predicted: {: 2.1f}'.format(pred_margin), 'actual: {: 2.1f}'.format(margin), status)
+

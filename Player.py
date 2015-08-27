@@ -218,6 +218,15 @@ class Player:
                           '{} {} from {} to {}'.format(first_name, last_name, start_date, end_date),
                           plot_type=plot_type, hex_size=hex_size, overplot_shots=overplot_shots)
 
+    def plot_cumul_charts(player_id, hex_sizes, output_types):
+
+        for hex_size in hex_sizes:
+            for output_type in output_types:
+                cumul_team_shot_chart_with_player(player_id, hex_size=hex_size, output_type=output_type, scale_factor=128)
+                cumul_team_shot_chart_without_player(player_id, hex_size=hex_size, output_type=output_type, scale_factor=128)
+                cumul_opp_shot_chart_with_player(player_id, hex_size=hex_size, output_type=output_type, scale_factor=128)
+                cumul_opp_shot_chart_without_player(player_id, hex_size=hex_size, output_type=output_type, scale_factor=128)
+
     def drtg(self, game):
 
         box_score = game.player_boxscore(self)

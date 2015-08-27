@@ -186,3 +186,7 @@ class TeamBoxscore(Boxscore):
             return retval
         else:
             raise NotImplementedError()
+
+    @property
+    def plus_minus(self):
+        return self.points - self.points_against

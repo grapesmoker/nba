@@ -198,3 +198,214 @@ def player_dcluster_features(player_id, start_date=dt.date(2012, 10, 27), end_da
         features = [player_id, 0, 0, 0, 0, 0, 0]
 
     return features
+
+def merge_team_features(off_file, def_file, output_file):
+
+    off_data = pylab.genfromtxt(off_file, delimiter=',')
+    def_data = pylab.genfromtxt(def_file, delimiter=',')
+
+    print len(off_data[0])
+    print len(def_data)
+
+    writer = csv.writer(open(output_file, 'w'))
+
+    off_data = sorted(off_data, key=lambda x: x[0])
+    def_data = sorted(def_data, key=lambda x: x[0])
+
+    for oline, dline in zip(off_data, def_data):
+        comb_line = pylab.concatenate((oline, dline[1:]))
+        writer.writerow(comb_line)
+
+def add_team_clusters_to_csv(input_filename, output_filename):
+
+    reader = csv.reader(open(input_filename, 'r'))
+    writer = csv.writer(open(output_filename, 'w'))
+    headers = reader.next()
+
+    headers.append('home_oclass')
+    headers.append('home_dclass')
+    headers.append('home_tclass')
+    headers.append('away_oclass')
+    headers.append('away_dclass')
+    headers.append('away_tclass')
+
+    writer.writerow(headers)
+
+    team_oclusters, off_gmm = compute_team_clusters('team_features_offense_w_id.csv')
+    team_dclusters, def_gmm = compute_team_clusters('team_features_defense_w_id.csv')
+    team_tclusters, tot_gmm = compute_team_clusters('team_features_combined.csv')
+
+    for line in reader:
+
+        home_team = int(line[3].strip())
+        away_team = int(line[4].strip())
+
+        home_oclass = find_member_in_clusters(team_oclusters, home_team)
+        home_dclass = find_member_in_clusters(team_dclusters, home_team)
+        home_tclass = find_member_in_clusters(team_tclusters, home_team)
+        away_oclass = find_member_in_clusters(team_oclusters, away_team)
+        away_dclass = find_member_in_clusters(team_dclusters, away_team)
+        away_tclass = find_member_in_clusters(team_tclusters, away_team)
+
+        writer.writerow(line + [home_oclass, home_dclass, home_tclass, away_oclass, away_dclass, away_tclass])
+
+def construct_odds_csv(input_filename, output_filename):
+
+    reader = csv.reader(open(input_filename, 'r'))
+    stat_cats = ['PTS', 'FG%', '3P%', 'DRB%', 'ORB%', 'AST', 'BLK', 'STL',
+                 'TOV', 'FT%', 'PIP', 'PTO', '2CP', 'FBP', 'PFL', 'DRTG', 'ORTG', 'REST']
+
+    stat_headers = {'PTS': 'points',
+                    'FG%': 'field_goal_pct',
+                    '3P%': '3_pt_pct',
+                    'DRB%': 'def_reb_pct',
+                    'ORB%': 'off_reb_pct',
+                    'AST': 'assists',
+                    'BLK': 'blocks',
+                    'STL': 'steals',
+                    'TOV': 'turnovers',
+                    'FT%': 'free_throw_pct',
+                    'PIP': 'pts_in_paint',
+                    'PTO': 'pts_off_tov',
+                    '2CP': '2nd_chance_pts',
+                    'FBP': 'fast_break_pts',
+                    'PFL': 'fouls',
+                    'DRTG': 'def_rtg',
+                    'ORTG': 'off_rtg'}
+
+    output_headers = reader.next() + ['home_points',
+                                      'home_field_goal_pct',
+                                      'home_3_pt_pct',
+                                      'home_def_reb_pct',
+                                      'home_off_reb_pct',
+                                      'home_assists',
+                                      'home_blocks',
+                                      'home_steals',
+                                      'home_turnovers',
+                                      'home_free_throw_pct',
+                                      'home_pts_in_paint',
+                                      'home_pts_off_tov',
+                                      'home_2nd_chance_pts',
+                                      'home_fast_break_pts',
+                                      'home_fouls',
+                                      'home_def_rtg',
+                                      'home_off_rtg',
+                                      'home_days_rest',
+    ## features for individual players
+    ## 7 offensive players, ranked by minutes
+                                      'home_p1_off',
+                                      'home_p2_off',
+                                      'home_p3_off',
+                                      'home_p4_off',
+                                      'home_p5_off',
+                                      'home_p6_off',
+                                      'home_p7_off',
+    ## 7 defensive players, ranked by minutes
+                                      'home_p1_def',
+                                      'home_p2_def',
+                                      'home_p3_def',
+                                      'home_p4_def',
+                                      'home_p5_def',
+                                      'home_p6_def',
+                                      'home_p7_def',
+    ## away team
+                                      'away_points',
+                                      'away_field_goal_pct',
+                                      'away_3_pt_pct',
+                                      'away_def_reb_pct',
+                                      'away_off_reb_pct',
+                                      'away_assists',
+                                      'away_blocks',
+                                      'away_steals',
+                                      'away_turnovers',
+                                      'away_free_throw_pct',
+                                      'away_pts_in_paint',
+                                      'away_pts_off_tov',
+                                      'away_2nd_chance_pts',
+                                      'away_fast_break_pts',
+                                      'away_fouls',
+                                      'away_def_rtg',
+                                      'away_off_rtg',
+                                      'away_days_rest',
+    ## features for individual players
+    ## 7 offensive players, ranked by minutes
+                                      'away_p1_off',
+                                      'away_p2_off',
+                                      'away_p3_off',
+                                      'away_p4_off',
+                                      'away_p5_off',
+                                      'away_p6_off',
+                                      'away_p7_off',
+    ## 7 defensive players, ranked by minutes
+                                      'away_p1_def',
+                                      'away_p2_def',
+                                      'away_p3_def',
+                                      'away_p4_def',
+                                      'away_p5_def',
+                                      'away_p6_def',
+                                      'away_p7_def',]
+
+    off_data = pylab.genfromtxt('offense_clusters_w_id.csv', delimiter=',')
+    def_data = pylab.genfromtxt('defense_clusters_w_id.csv', delimiter=',')
+
+    print 'Clustering offense...'
+    player_oclusters, off_gmm = compute_player_clusters('offense_clusters_w_id.csv', clusters=10, method='GMM')
+    print 'Clustering defense...'
+    player_dclusters, def_gmm = compute_player_clusters('defense_clusters_w_id.csv', clusters=10, method='GMM')
+
+    print 'Constructing odds data...'
+    output_lines = [output_headers]
+
+    writer = csv.writer(open(output_filename, 'w'))
+    writer.writerow(output_headers)
+
+    for line in reader:
+        year = int(line[0].strip())
+        month = int(line[1].strip())
+        day = int(line[2].strip())
+        game_day = dt.date(year=year, month=month, day=day)
+        home_team = int(line[3].strip())
+        away_team = int(line[4].strip())
+
+        print game_day, home_team, away_team
+
+        try:
+            game_id = look_up_contest_id(game_day, home_team)
+
+            home_players = game_players(game_id, home_team)[0:7]
+            away_players = game_players(game_id, away_team)[0:7]
+
+
+
+            home_box, away_box = boxscore_stats(game_day, home_team)
+
+            # insert the home stats
+            for stat in stat_cats:
+                line.append(home_box[stat])
+
+            for hp in home_players:
+                player_oclass = find_member_in_clusters(player_oclusters, hp)
+                line.append(player_oclass)
+
+            for hp in home_players:
+                player_dclass = find_member_in_clusters(player_dclusters, hp)
+                line.append(player_dclass)
+
+            # insert the away stats
+            for stat in stat_cats:
+                line.append(away_box[stat])
+
+            for ap in away_players:
+                player_oclass = find_member_in_clusters(player_oclusters, ap)
+                line.append(player_oclass)
+
+            for ap in away_players:
+                player_dclass = find_member_in_clusters(player_dclusters, ap)
+                line.append(player_dclass)
+
+        except Exception as ex:
+            print ex
+            print 'Game not found... possibly a game was postponed/canceled'
+
+        writer.writerow(line)
+        output_lines.append(line)

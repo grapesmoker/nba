@@ -1,6 +1,8 @@
 from __future__ import division
 
 import datetime as dt
+import numpy as np
+
 from settings import pbp
 
 from itertools import combinations
@@ -56,6 +58,8 @@ class Game:
         # all the actual data is contained in here, so let's just throw away the outer
         # shells of the json
         self._core_data = data['league']['season']['eventType'][0]['events'][0]
+        self._id = self._core_data['eventId']
+        self._game_type = data['league']['season']['eventType'][0]['name']
         self._date = dt.datetime.strptime(self._core_data['startDate'][0]['full'], '%Y-%m-%dT%H:%M:%S')
         self._teams = self._core_data['teams']
         self._home_team = self._teams[0]
@@ -65,6 +69,36 @@ class Game:
         self._pbp = self._core_data['pbp']
         self._events = [Event(play_data) for play_data in self._pbp]
 
+        self._add_custom_fields()
+        self._pre_cache_lineups()
+
+    def _add_custom_fields(self):
+
+        id_str = 'league.season.eventType.0.events.0.eventId'
+        update_str = 'league.season.eventType.0.events.0.boxscores.'
+
+        if 'lineups' not in self._core_data['boxscores'][0]:
+            self._coll.update_one({id_str: self._id}, {'$set': {update_str + '0.lineups': []}})
+            self._coll.update_one({id_str: self._id}, {'$set': {update_str + '1.lineups': []}})
+            self._core_data['boxscores'][0]['lineups'] = []
+            self._core_data['boxscores'][1]['lineups'] = []
+
+    def _pre_cache_lineups(self):
+
+        # pre-cache lineups on load
+        self._non_empty_lineups = {}
+        self._empty_lineups = {}
+
+        self._non_empty_lineups[0] = [lineup for lineup in self._core_data['boxscores'][0]['lineups']
+                                      if lineup['times'] != []]
+        self._non_empty_lineups[1] = [lineup for lineup in self._core_data['boxscores'][1]['lineups']
+                                      if lineup['times'] != []]
+
+        self._empty_lineups[0] = [lineup for lineup in self._core_data['boxscores'][0]['lineups']
+                                  if lineup['times'] == []]
+        self._empty_lineups[1] = [lineup for lineup in self._core_data['boxscores'][1]['lineups']
+                                  if lineup['times'] == []]
+
     def __str__(self):
         home_team_name = self._home_team['location'] + ' ' + self._home_team['nickname']
         away_team_name = self._away_team['location'] + ' ' + self._away_team['nickname']
@@ -72,6 +106,14 @@ class Game:
 
     def __repr__(self):
         return self.__str__()
+
+    @property
+    def id(self):
+        return self._id
+    
+    @property
+    def game_type(self):
+        return self._game_type
 
     @property
     def teams(self):
@@ -303,6 +345,28 @@ class Game:
         players = [player for player in self.game_players(team) if player.minutes_played(self) > 0]
         return combinations(players, 5)
 
+    def _find_empty_lineup(self, lineup_hash, team_index):
+        lineups = [lineup for lineup in self._empty_lineups[team_index]
+                   if 'hash' in lineup and lineup['hash'] == lineup_hash]
+        if lineups != []:
+            return lineups[0]
+        else:
+            return None
+
+    def _find_non_empty_lineup(self, lineup_hash, team_index):
+        lineups = [lineup for lineup in self._non_empty_lineups[team_index]
+                   if 'hash' in lineup and lineup['hash'] == lineup_hash]
+        if lineups != []:
+            return lineups[0]
+        else:
+            return None
+
+    def _lineup_hash(self, players):
+        """Hash the lineup by taking the hash of the sum of the player IDs.
+        Used to keep track of which lineups have already been computed on a
+        per-game basis."""
+        return hash(np.sum([player.id for player in players]))
+
     def time_by_lineup(self, players):
 
         team = self.player_team(players[0])
@@ -310,7 +374,59 @@ class Game:
             if not team.is_player_on_team(player, self):
                 raise GameDataError('All players must be on the same team!')
 
-        timestream = self.multiple_player_overlap(players)
+        team = self.player_team(players[0])
+
+        if self.is_home(team):
+            team_index = 0
+        elif self.is_away(team):
+            team_index = 1
+        else:
+            raise GameDataError('{} did not participate in {}'.format(team, self))
+
+        timestream = []
+        ts_empty = False
+
+        lineup_hash = self._lineup_hash(players)
+
+        non_empty = self._find_non_empty_lineup(lineup_hash, team_index)
+        empty = self._find_empty_lineup(lineup_hash, team_index)
+
+        if empty and not non_empty:
+            #print 'no timestream for lineup: {}'.format(players)
+            timestream = []
+
+        elif non_empty and not empty:
+            #print 'retrieving cached timestream for lineup: {}'.format(players)
+            for interval in non_empty['times']:
+                start = dt.timedelta(seconds=interval['start'])
+                end = dt.timedelta(seconds=interval['end'])
+                timestream.append((start, end))
+
+        elif not empty and not non_empty:
+
+            #print 'calculating timestream for lineup: {}'.format(players)
+
+            timestream = self.multiple_player_overlap(players)
+
+            # this is expensive to compute so cache it in the db because it doesn't change
+            # on a per-game basis
+
+            id_str = 'league.season.eventType.0.events.0.eventId'
+            update_str = 'league.season.eventType.0.events.0.boxscores.{}.lineups'.format(team_index)
+
+            player_data = [player.id for player in players]
+            time_data = []
+            lineup_hash = hash(np.sum(player_data))
+
+            for interval in timestream:
+                time_data.append({'start': interval[0].seconds, 'end': interval[1].seconds})
+
+            lineup_data = {'players': player_data, 'times': time_data, 'hash': lineup_hash}
+            self._coll.update_one({id_str: self._id},
+                {'$addToSet': {update_str: lineup_data}})
+
+            # update the in-memory data
+            self._core_data['boxscores'][team_index]['lineups'].append(lineup_data)
 
         return timestream
 
@@ -486,11 +602,28 @@ class Game:
             if not team.is_player_on_team(player, self):
                 raise GameDataError('All players must be on the same team!')
 
-        timestream = self.multiple_player_overlap(players)
+        timestream = self.time_by_lineup(players)
 
         box_score = self.team_stats_by_time(team, timestream)
 
         return box_score
 
+    def plot_all_game_charts(self):
+
+        home_players, away_players = get_player_boxscores(game_id)
+
+        for player in home_players:
+            print 'Processing ', player['first-name'], player['last-name']
+            player_id = player['id']
+            player_shot_chart(game_id, player_id)
+            team_shot_chart_with_player(game_id, player_id)
+            team_shot_chart_without_player(game_id, player_id)
+
+        for player in away_players:
+            print 'Processing ', player['first-name'], player['last-name']
+            player_id = player['id']
+            player_shot_chart(game_id, player_id)
+            team_shot_chart_with_player(game_id, player_id)
+            team_shot_chart_without_player(game_id, player_id)
 
 

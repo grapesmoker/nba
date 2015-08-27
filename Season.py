@@ -109,6 +109,14 @@ class Season:
     def __len__(self):
         return len(self.season)
 
+    @property
+    def regular_season_games(self):
+        return [game for game in self._games if game.game_type == 'Regular Season']
+
+    @property
+    def postseason_games(self):
+        return [game for game in self._games if game.game_type == 'Postseason']
+
     def get_all_games_in_range(self, start_date=None, end_date=None):
 
         if start_date is not None and end_date is None:
