@@ -1,7 +1,10 @@
+from __future__ import division
+
 __author__ = 'jerry'
 
 import pandas as pd
 import numpy as np
+import re
 
 from utils import compute_ts_length
 
@@ -20,8 +23,10 @@ def regress_lineups_single_game(game, team):
     lineups = game.lineup_combinations(team)
     players = game.game_players(team)
 
+    cleanup = "([\s]|\.|')"
+
     players = sorted(players, key=lambda p: p.minutes_played(game), reverse=True)
-    columns = [str(player).replace(' ', '').replace('.', '') for player in players] + ['plus_minus']
+    columns = [re.sub(cleanup, '', str(player))for player in players] + ['plus_minus']
 
     data = pd.DataFrame(columns=columns)
     i = 0
@@ -31,6 +36,8 @@ def regress_lineups_single_game(game, team):
         lineup_time = lineup_minutes(lineup)
         total_minutes += lineup_time
         if lineup_time > 0:
+            print lineup, round(lineup_time, 3)
+            #print [player.id for player in lineup]
             player_features = np.zeros(len(columns))
             box_score = game.stats_by_lineup(lineup)
             for player in lineup:
@@ -39,10 +46,13 @@ def regress_lineups_single_game(game, team):
                 player_features[-1] = box_score.plus_minus
             data.loc[i] = player_features
             i += 1
+        if lineup_time < 0:
+            print lineup, lineup_time
+
 
     player_formula = ' + '.join(columns[:-1])
     formula_str = 'plus_minus ~ ' + player_formula
-    print formula_str
+    print 'total minutes played: {}'.format(total_minutes)
 
     y, X = dmatrices(formula_str, data=data, return_type='dataframe')
 

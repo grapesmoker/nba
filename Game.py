@@ -12,7 +12,7 @@ from Player import Player
 from Event import Event
 from Boxscore import TeamBoxscore, PlayerBoxscore
 
-from utils import recursive_intersect
+from utils import shared_times, recursive_intersect
 
 class NoCollectionError(Exception):
 
@@ -110,7 +110,7 @@ class Game:
     @property
     def id(self):
         return self._id
-    
+
     @property
     def game_type(self):
         return self._game_type
@@ -154,6 +154,10 @@ class Game:
     @property
     def date(self):
         return self._date
+
+    @property
+    def periods(self):
+        return self._core_data['eventStatus']['period']
 
     @property
     def home_boxscore(self):
@@ -475,6 +479,43 @@ class Game:
 
         return quarter_starters
 
+    def quarter_enders(self):
+
+        quarter_enders = {}
+
+        for q in [1, 2, 3, 4]:
+
+            quarter_plays = sorted([ev for ev in self._events if ev.period == q])
+
+            players_used = []
+            subs_used = []
+            i = 0
+            done = False
+
+            while i < len(quarter_plays) and not done:
+                event = quarter_plays[i]
+                players = event.players
+
+                if event.play_text.find('Substitution:') > -1:
+                    subbed_in_player = players[0]
+                    subbed_out_player = players[1]
+                    if subbed_in_player not in players_used:
+                        players_used.append(subbed_in_player)
+                    if subbed_out_player not in subs_used:
+                        subs_used.append(subbed_out_player)
+                else:
+                    for player in players:
+                        if player not in subs_used and player not in players_used:
+                            players_used.append(player)
+
+                i += 1
+                if len(players_used) == 10:
+                    done = True
+
+            quarter_enders[q] = players_used
+
+        return quarter_enders
+
     @classmethod
     def look_up_game(cls, game_day, team_id):
 
@@ -491,19 +532,24 @@ class Game:
 
     def multiple_player_overlap(self, players_on, players_off=None):
 
+        #import time
+        #start = time.clock()
         player_times = [player.time_on_court(self) for player in players_on]
-
+        #end = time.clock()
+        #print 'took {}s to calculate player times on court'.format(end - start)
         shared_times = recursive_intersect(player_times)[0]
+        #print player_times
 
         return shared_times
 
+
     def events_in_interval(self, interval):
 
-        return sorted([event for event in self.events if interval[1] <= event.play_time <= interval[0]])
+        return sorted([event for event in self.events if interval[0] <= event.play_time <= interval[1]])
 
     def events_not_in_interval(self, interval):
 
-        return sorted([event for event in self.events if not interval[1] <= event.play_time <= interval[0]])
+        return sorted([event for event in self.events if not interval[0] <= event.play_time <= interval[1]])
 
     def events_in_intervals(self, intervals):
 
@@ -587,10 +633,14 @@ class Game:
             elif event.is_turnover:
                 player = event.turned_over_by
                 stolen_by = event.stolen_by
-                if team.is_player_on_team(player, self):
+                if player and team.is_player_on_team(player, self):
                     team_box_score.turnovers_total += 1
                 elif stolen_by and team.is_player_on_team(stolen_by, self):
                     team_box_score.steals += 1
+                else:
+                    # shot clock turnover
+                    if team.nickname in event.play_text:
+                        team_box_score.turnovers_total += 1
 
         return team_box_score
 

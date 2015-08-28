@@ -81,6 +81,80 @@ def intersect_all(times):
     # new_times = [t1_int_t2] + times[2:]
     # return intersect_all(new_times)
 
+def shared_times(times):
+
+    class Transition():
+        # type can be 'enter' or 'exit'
+        def __init__(self):
+            self.type = None
+            self.time = None
+
+    times_on = []
+    times_off = []
+    for player_time in times:
+        times_on += [t[0] for t in player_time]
+        times_off += [t[1] for t in player_time]
+
+    times_on = sorted(times_on, reverse=True)
+    times_off = sorted(times_off, reverse=True)
+
+    #print map(str, times_on)
+    #print map(str, times_off)
+
+    i, j = 0, 0
+    enter = 1
+    max_enter = enter
+
+    timestream = []
+    while i < len(times_on) and j < len(times_off):
+        #print i, j, times_on[i], times_off[j]
+
+        if timestream == []:
+            timestream.append((times_on[i], 'enter', enter))
+            i += 1
+            enter += 1
+
+        elif times_on[i] > times_off[j]:
+            timestream.append((times_on[i], 'enter', enter))
+            i += 1
+            enter += 1
+
+        elif times_on[i] == times_off[j]:
+            timestream.append((times_on[i], 'enter', enter))
+            timestream.append((times_off[j], 'exit', enter))
+            i += 1
+            j += 1
+
+        elif times_on[i] < times_off[j]:
+            enter -= 1
+            timestream.append((times_off[j], 'exit', enter))
+            j += 1
+
+        if enter > max_enter:
+            max_enter = enter
+
+    while j < len(times_off):
+        enter -= 1
+        timestream.append((times_off[j], 'exit', enter))
+        j += 1
+
+    max_enter -= 1
+
+    final_times = []
+    i = 0
+    while i < len(timestream) - 1:
+        current = timestream[i]
+        next = timestream[i + 1]
+
+        if current[1] == 'enter' and next[1] == 'exit' \
+                and current[2] == next[2] \
+                and current[2] == max_enter \
+                and not current[0] == next[0]:
+            final_times.append((current[0], next[0]))
+
+        i += 1
+
+    return final_times
 
 def recursive_intersect(timestream):
 
@@ -211,11 +285,14 @@ def timestream_overlap(ts1, ts2):
 
     return overlap_time
 
-def compute_ts_length(ts):
+def compute_ts_length(ts, unit='seconds'):
 
     seconds = 0
     for ti, to in ts:
         td = ti - to
         seconds += td.total_seconds()
 
-    return seconds
+    if unit == 'minutes':
+        return seconds / 60.0
+    else:
+        return seconds

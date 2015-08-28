@@ -1,5 +1,10 @@
+from __future__ import division
+
 __author__ = 'jerry'
 
+import datetime as dt
+
+from Boxscore import PlayerBoxscore, TeamBoxscore
 
 def team_ocluster_features(team_id, start_date=dt.date(2012, 10, 27), end_date=dt.date(2013, 4, 17)):
 
@@ -54,58 +59,48 @@ def team_dcluster_features(team_id, start_date=dt.date(2012, 10, 30), end_date=d
 
     return features
 
-def player_ocluster_features(player_id, start_date=dt.date(2012, 10, 27), end_date=dt.date(2013, 4, 17)):
+def player_ocluster_features(player, season, start_date=None, end_date=None):
 
-    games_played = games_played_pbp(player_id, start_date, end_date)
+    games_played = season.get_player_games_in_range(player, start_date, end_date)
 
-    ast = 0
-    fgm = 0
-    fga = 0
-    ftm = 0
-    fta = 0
-    orb = 0
-    tpa = 0
-    tpm = 0
-    pts = 0
-    tov = 0
-    mp = 0
-
-    team_orb = 0
-    team_mp = 0
-    team_fgm = 0
+    player_boxscore = PlayerBoxscore()
+    team_boxscore = TeamBoxscore()
+    opp_boxscore = TeamBoxscore()
     team_pos = 0
-    team_pts = 0
-
     opp_drb = 0
 
     for i, game in enumerate(games_played):
-        game_id = int(game['playbyplay']['contest']['id'])
 
-        player_data, team_data = player_ortg(game_id, player_id, return_data=True)
+        game_p_boxscore = game.player_boxscore(player)
+        player_boxscore = player_boxscore + PlayerBoxscore(game_p_boxscore)
+        team = game.player_team(player)
+        opponent = game.opponent(team)
+        game_t_boxscore = game.team_boxscore(team)
+        team_boxscore = team_boxscore + TeamBoxscore(game_t_boxscore)
+        opp_boxscore = opp_boxscore + game.team_boxscore(opponent)
 
-        ast += player_data['ast']
-        fgm += player_data['fgm']
-        fga += player_data['fga']
-        ftm += player_data['ftm']
-        fta += player_data['fta']
-        tov += player_data['tov']
-        tpa += player_data['threes_a']
-        tpm += player_data['threes']
-        orb += player_data['orb']
-        pts += player_data['pts']
-        mp += player_data['mp']
-
-        team_orb += team_data['team_orb']
-        team_mp += team_data['team_mp']
-        team_fgm += team_data['team_fgm']
-        team_pos += team_data['team_pos']
-        team_pts += team_data['team_pts']
-        opp_drb += team_data['opp_dreb']
-
+        team_pos += game.possessions(team)
 
     try:
 
-        #print team_pts, team_pos
+        ast = player_boxscore.assists
+        fgm = player_boxscore.field_goals_made
+        fga = player_boxscore.field_goals_attempted
+        ftm = player_boxscore.free_throws_made
+        fta = player_boxscore.free_throws_attempted
+        tov = player_boxscore.turnovers
+        tpa = player_boxscore.three_point_field_goals_attempted
+        tpm = player_boxscore.three_point_field_goals_made
+        orb = player_boxscore.rebounds_offensive
+        pts = player_boxscore.points
+        mp = player_boxscore.total_seconds_player / 60.0
+
+        team_pts = team_boxscore.points
+        team_mp = team_boxscore.minutes
+        team_fgm = team_boxscore.field_goals_made
+        team_pts = team_boxscore.points
+        team_orb = team_boxscore.rebounds_offensive
+        opp_drb = opp_boxscore.rebounds_defensive
 
         team_ortg = 100 * team_pts / team_pos
 
@@ -113,19 +108,19 @@ def player_ocluster_features(player_id, start_date=dt.date(2012, 10, 27), end_da
         ts_pct = pts / (2 * (fga + 0.44 * fta))
         orb_pct = 100 * (orb * (team_mp / 5)) / (mp * (team_orb + opp_drb))
         mp_pct = 100 * mp / (team_mp / 5)
-        usg = cumul_player_usage(player_id, start_date, end_date)
-        ortg = cumul_player_ortg(player_id, start_date, end_date)
+        usg = season.player_usage(player, start_date, end_date)
+        ortg = season.player_ortg(player, start_date, end_date)
 
         #print team_ortg, ortg
 
         ortg_pct = 100 * (1 + (ortg - team_ortg)  / team_ortg)
 
-        features = [player_id, ast_pct, ts_pct, orb_pct, usg, ortg, mp_pct]
+        features = [player.id, ast_pct, ts_pct, orb_pct, usg, ortg, mp_pct]
 
     except Exception as ex:
         print ex
 
-        features = [player_id, 0, 0, 0, 0, 0, 0]
+        features = [player.id, 0, 0, 0, 0, 0, 0]
 
     return features
 

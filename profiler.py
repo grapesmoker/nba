@@ -10,9 +10,11 @@ from analysis import regression
 
 def test_single_game_rapm():
 
-    game = Game(1349077)
-    team = Team(12)
+    game = Game(1349547)
+    team = game.home_team
     
+    print game
+
     regression.regress_lineups_single_game(game, team)
 
 def test_single_lineup():
@@ -37,5 +39,5 @@ def test_single_lineup():
     pprint(box_score.__dict__)
 
 if __name__ == '__main__':
-    test_single_lineup()
-    #test_single_game_rapm()
+    #test_single_lineup()
+    test_single_game_rapm()

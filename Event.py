@@ -35,8 +35,25 @@ class Event:
 
     @property
     def play_time(self):
-        return dt.timedelta(minutes=((4 - int(self._play_data['period'])) * 12 + int(self._play_data['time']['minutes'])),
-                        seconds=int(float(self._play_data['time']['seconds'])))
+
+        minutes = int(self._play_data['time']['minutes'])
+        seconds = float(self._play_data['time']['seconds'])
+        period = int(self._play_data['period'])
+
+        if period < 5:
+            q_start_time = dt.timedelta(minutes=(period - 1) * 12)
+            time_in_quarter = dt.timedelta(minutes=12) - dt.timedelta(minutes=minutes, seconds=seconds)
+        else:
+            q_start_time = dt.timedelta(minutes=48 + (period - 5) * 5)
+            time_in_quarter = dt.timedelta(minutes=5) - dt.timedelta(minutes=minutes, seconds=seconds)
+
+        return q_start_time + time_in_quarter
+
+    @property
+    def time_remaining(self):
+        return 0
+        #return dt.timedelta(minutes=((4 - int(self._play_data['period'])) * 12 + int(self._play_data['time']['minutes'])),
+        #                seconds=int(float(self._play_data['time']['seconds'])))
 
     @property
     def id(self):
@@ -80,21 +97,27 @@ class Event:
 
     def is_in_interval(self, interval):
 
-        if interval[1] <= self.play_time <= interval[0]:
+        if interval[1] >= self.play_time >= interval[0]:
             return True
         else:
             return False
 
     def __cmp__(self, other):
         if self.play_time == other.play_time:
-            return 0
+            if self.id == other.id:
+                return 0
+            elif self.id < other.id:
+                return 1
+            elif self.id > other.id:
+                return -1
+
         elif self.play_time < other.play_time:
             return -1
         elif self.play_time > other.play_time:
             return 1
 
     def __str__(self):
-        return '<{0}>'.format(str(self.play_time))
+        return '<{0}: {1}>'.format(str(self.play_time), self.play_text)
 
     def __repr__(self):
         return self.__str__()

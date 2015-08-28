@@ -140,7 +140,7 @@ class Season:
     def get_player_games_in_range(self, player, start_date=None, end_date=None):
 
         games = [game for game in self.get_all_games_in_range(start_date, end_date)
-                 if game.player_in_game(self)]
+                 if game.player_in_game(player)]
 
         return games
 

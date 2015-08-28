@@ -3,11 +3,14 @@ from __future__ import division
 
 import datetime as dt
 import argparse
+import json
 
 from tqdm import tqdm
 from utils import compute_ts_length
 from Season import Season
+from Player import Player
 
+from settings import pbp, players
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -58,8 +61,10 @@ def compute_all_season_lineups(year):
         away_lineups = game.lineup_combinations(away_team)
 
         try:
-            home_timestream = game.time_by_lineup(home_lineups)
-            away_timestream = game.time_by_lineup(away_lineups)
+            for lineup in home_lineups:
+                home_timestream = game.time_by_lineup(lineup)
+            for lineup in away_lineups:
+                away_timestream = game.time_by_lineup(lineup)
             home_minutes = compute_ts_length(home_timestream)
             away_minutes = compute_ts_length(away_timestream)
 
@@ -70,6 +75,53 @@ def compute_all_season_lineups(year):
             print ex
 
 
+def import_pbp(pbp_file):
+
+    print 'importing {}'.format(pbp_file)
+
+    json_data = json.load(open(pbp_file, 'r'))
+    game_id = json_data['league']['season']['eventType'][0]['events'][0]['eventId']
+
+    print game_id
+    pbp.update({'league.season.eventType.0.events.0.eventId': game_id}, json_data, upsert=True)
+
+
+def import_pbp_files(files):
+
+    for pbp_file in files:
+        import_pbp(pbp_file)
+
+
+def calc_all_player_times(year):
+
+    class TimeComputationError(Exception):
+
+        def __init__(self, msg):
+            self.msg = msg
+        def __str__(self):
+            return self.msg
+
+    all_players = players.find({})
+
+    print 'Loading the {}-{} NBA season'.format(year, year + 1)
+    season = Season(year)
+    print 'Loaded season'
+    print 'Computing time on court for all players in all games...'
+
+    for player_data in tqdm(all_players):
+        player = Player(player_data['id'])
+        games_played = season.get_player_games_in_range(player)
+        for game in games_played:
+            print 'Calculating time on court for {} ({}) in {} ({})'.format(player, player.id, game, game.id)
+            time_on_court = player.time_on_court(game)
+            computed_minutes = compute_ts_length(time_on_court, unit='minutes')
+            boxscore_minutes = game.player_boxscore(player)['totalSecondsPlayed'] / 60.0
+            if not abs(computed_minutes - boxscore_minutes) <= 0.5:
+                raise TimeComputationError('Discrepancy between computed time: {}, and boxscore time: {}'.format(computed_minutes, boxscore_minutes))
+            else:
+                print '{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -78,7 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('-ln', '--lastname', dest='player_lastname')
     parser.add_argument('-pt', '--plot_type', dest='plot_type', default='hexbin')
     parser.add_argument('-gid', '--game_id', dest='game_id', type=int)
-    parser.add_argument('-if', '--input_file', dest='input_file')
+    parser.add_argument('-if', '--input_file', dest='input_file', nargs='*')
     parser.add_argument('-of', '--output_file', dest='output_file')
     
     args = parser.parse_args()
@@ -86,6 +138,14 @@ if __name__ == '__main__':
     if args.operation == 'compute_timelines':
 
         compute_all_season_lineups(2013)
+
+    if args.operation == 'import_pbp' and args.input_file:
+
+        import_pbp_files(args.input_file)
+
+    if args.operation == 'compute_player_times':
+
+        calc_all_player_times(2013)
 
     if args.operation == 'scrape_data':
         season_start_date = dt.datetime(2013, 10, 29)

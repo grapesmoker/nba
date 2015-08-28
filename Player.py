@@ -19,6 +19,15 @@ class Player:
         self._last_name = self._player['lastName']
         self._id = self._player['id']
 
+        self._add_custom_fields()
+
+    def _add_custom_fields(self):
+
+        if 'timeOnCourt' not in self._player:
+            self._coll.update_one({'id': self.id}, {'$set': {'timeOnCourt': []}})
+            self._player['timeOnCourt'] = []
+
+
     @property
     def first_name(self):
         return self._first_name
@@ -71,7 +80,7 @@ class Player:
 
         return consistent
 
-    def time_on_court(self, game):
+    def time_on_court_bad(self, game):
 
         plays_subbed_in = [event for event in game.events if event.play_text.find('Substitution:') > -1
                            and event.players[0] == self]
@@ -92,22 +101,34 @@ class Player:
         
         for q, starters in q_starters.items():
             q_start_time = dt.timedelta(minutes=((5 - q) * 12))
+            q_end_time = dt.timedelta(minutes=((4 - q) * 12))
 
             if self in starters and q > 1:
                 last_sub_in = sorted([t for t in times_subbed_in if t > q_start_time], reverse=True)
                 last_sub_out = sorted([t for t in times_subbed_out if t > q_start_time], reverse=True)
-
+                print 'q: {}, last sub in: {}, last sub out: {}'.format(q, str(last_sub_in), str(last_sub_out))
                 if last_sub_in != [] and last_sub_out != []:
                     last_sub_in, last_sub_out = last_sub_in[-1], last_sub_out[-1]
                     if last_sub_in > last_sub_out:
                         times_subbed_in.append(q_start_time)
+                    if last_sub_in < last_sub_out:
+                        times_subbed_out.append(q_end_time)
+                elif last_sub_in == []:
+                    times_subbed_in.append(q_start_time)
+            elif self not in starters and q > 1:
+                last_sub_in = sorted([t for t in times_subbed_in if t > q_start_time], reverse=True)
+                last_sub_out = sorted([t for t in times_subbed_out if t > q_start_time], reverse=True)
+
+                print 'q: {}, last sub in: {}, last sub out: {}'.format(q, str(last_sub_in), str(last_sub_out))
+
+
             elif self in starters and q == 1:
                 times_subbed_in.append(q_start_time)
 
 
         times_subbed_in = sorted(times_subbed_in, reverse=True)
 
-        #print map(str, times_subbed_in), map(str, times_subbed_out)
+        print 'in/out:', map(str, times_subbed_in), map(str, times_subbed_out)
 
         i = 0
 
@@ -119,7 +140,7 @@ class Player:
                 ti_next = dt.timedelta(minutes=0)
 
             to_arr = [to for to in times_subbed_out if ti_next < to < ti]
-            
+
             if len(to_arr) == 0:
                 if q2 < ti and q2 >= ti_next:
                     times_subbed_out.append(q2)
@@ -138,6 +159,69 @@ class Player:
         time_stream = zip(times_subbed_in, times_subbed_out)
 
         return time_stream
+
+    def time_on_court(self, game, recompute=False):
+        empty_ts = False
+        timestream = []
+        if 'timeOnCourt' in self._player and not recompute:
+            print 'cached timestreams found'
+            for item in self._player['timeOnCourt']:
+                if item['gameId'] == game.id:
+                    #print 'retrieving cached timestream for {}'.format(self)
+                    for t in item['times']:
+                        timestream.append((dt.timedelta(seconds=t['start']), dt.timedelta(seconds=t['end'])))
+            if timestream == []:
+                empty_ts = True
+
+        if 'timeOnCourt' not in self._player or empty_ts or recompute:
+
+            print 'computing timestream for {}'.format(self)
+
+            periods = game.periods
+            quarter_starters = game.quarter_starters()
+            quarter_enders = game.quarter_enders()
+
+            times_subbed_in = []
+            times_subbed_out = []
+
+            for q in range(1, periods + 1):
+                if q < 5:
+                    q_start_time = dt.timedelta(minutes=(q - 1) * 12)
+                    q_end_time = dt.timedelta(minutes=q * 12)
+                else:
+                    q_start_time = dt.timedelta(minutes=48 + (q - 5) * 5)
+                    q_end_time = dt.timedelta(minutes=q * 5)
+                    
+                if self in quarter_starters[q]:
+                    times_subbed_in.append(q_start_time)
+
+                quarter_plays = sorted([ev for ev in game.events if ev.period == q], reverse=True)
+
+                times_subbed_in += [event.play_time for event in quarter_plays
+                                    if event.is_substitution and event.players[0] == self]
+                times_subbed_out += [event.play_time for event in quarter_plays
+                                     if event.is_substitution and event.players[1] == self]
+
+                if self in quarter_enders[q]:
+                    times_subbed_out.append(q_end_time)
+
+            timestream = zip(times_subbed_in, times_subbed_out)
+
+            time_data = [{'start': interval[0].seconds, 'end': interval[1].seconds}
+                         for interval in timestream]
+
+            time_on_court = {'gameId': game.id, 'times': time_data}
+            self._coll.update_one({'id': self.id}, {'$addToSet': {'timeOnCourt': time_on_court}})
+            self._player['timeOnCourt'].append(time_on_court)
+
+
+        return timestream
+
+    def subbed_in_at_quarter(self, game):
+
+        pass
+
+
 
     def minutes_played(self, game):
 
