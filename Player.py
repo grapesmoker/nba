@@ -191,11 +191,11 @@ class Player:
                 else:
                     q_start_time = dt.timedelta(minutes=48 + (q - 5) * 5)
                     q_end_time = dt.timedelta(minutes=q * 5)
-                    
+
                 if self in quarter_starters[q]:
                     times_subbed_in.append(q_start_time)
 
-                quarter_plays = sorted([ev for ev in game.events if ev.period == q], reverse=True)
+                quarter_plays = sorted([ev for ev in game.events if ev.period == q])
 
                 times_subbed_in += [event.play_time for event in quarter_plays
                                     if event.is_substitution and event.players[0] == self]
@@ -205,7 +205,14 @@ class Player:
                 if self in quarter_enders[q]:
                     times_subbed_out.append(q_end_time)
 
+                #print map(str, times_subbed_in)
+                #print map(str, times_subbed_out)
+
+
             timestream = zip(times_subbed_in, times_subbed_out)
+
+            #print map(str, times_subbed_in)
+            #print map(str, times_subbed_out)
 
             time_data = [{'start': interval[0].seconds, 'end': interval[1].seconds}
                          for interval in timestream]

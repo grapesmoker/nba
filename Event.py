@@ -107,9 +107,9 @@ class Event:
             if self.id == other.id:
                 return 0
             elif self.id < other.id:
-                return 1
-            elif self.id > other.id:
                 return -1
+            elif self.id > other.id:
+                return 1
 
         elif self.play_time < other.play_time:
             return -1

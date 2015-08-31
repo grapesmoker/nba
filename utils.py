@@ -290,7 +290,7 @@ def compute_ts_length(ts, unit='seconds'):
     seconds = 0
     for ti, to in ts:
         td = ti - to
-        seconds += td.total_seconds()
+        seconds += abs(td.total_seconds())
 
     if unit == 'minutes':
         return seconds / 60.0

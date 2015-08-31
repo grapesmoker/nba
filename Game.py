@@ -14,6 +14,8 @@ from Boxscore import TeamBoxscore, PlayerBoxscore
 
 from utils import shared_times, recursive_intersect
 
+from pprint import pprint
+
 class NoCollectionError(Exception):
 
     def __init__(self, msg):
@@ -442,17 +444,20 @@ class Game:
 
     def quarter_starters(self):
 
-        starting_lineup = [player[0] for player in
-                           [event.players for event in self._events if event.play_text == 'Starting Lineup']]
+        starting_lineup = set([player[0] for player in
+                           [event.players for event in self._events if event.play_text == 'Starting Lineup']])
 
         quarter_starters = {1: starting_lineup}
 
         for q in (2, 3, 4):
 
-            quarter_plays = sorted([ev for ev in self._events if ev.period == q], reverse=True)
+            quarter_plays = sorted([ev for ev in self._events if ev.period == q])
 
-            players_used = []
-            subs_used = []
+            #pprint(quarter_plays)
+
+            home_players_used = set()
+            away_players_used = set()
+            subs_used = set()
             i = 0
             done = False
 
@@ -462,20 +467,27 @@ class Game:
 
                 if event.play_text.find('Substitution:') > -1:
                     subbed_in_player = players[0]
-                    subs_used.append(subbed_in_player)
                     subbed_out_player = players[1]
-                    if subbed_out_player not in players_used:
-                        players_used.append(subbed_out_player)
+                    subs_used.add(subbed_in_player)
+                    team = self.player_team(subbed_out_player)
+                    if team == self.home_team and len(home_players_used) < 5:
+                        home_players_used.add(subbed_out_player)
+                    if team == self.away_team and len(away_players_used) < 5:
+                        away_players_used.add(subbed_out_player)
                 else:
                     for player in players:
-                        if player not in subs_used and player not in players_used:
-                            players_used.append(player)
+                        if player not in subs_used and player not in home_players_used and player not in away_players_used:
+                            team = self.player_team(player)
+                            if team == self.home_team and len(home_players_used) < 5:
+                                home_players_used.add(player)
+                            if team == self.away_team and len(away_players_used) < 5:
+                                away_players_used.add(player)
 
                 i += 1
-                if len(players_used) == 10:
+                if len(home_players_used) == 5 and len(away_players_used) == 5:
                     done = True
 
-            quarter_starters[q] = players_used
+            quarter_starters[q] = home_players_used | away_players_used
 
         return quarter_starters
 
@@ -485,10 +497,12 @@ class Game:
 
         for q in [1, 2, 3, 4]:
 
-            quarter_plays = sorted([ev for ev in self._events if ev.period == q])
+            quarter_plays = sorted([ev for ev in self._events if ev.period == q], reverse=True)
 
-            players_used = []
-            subs_used = []
+            subs_used = set()
+            home_players_used = set()
+            away_players_used = set()
+
             i = 0
             done = False
 
@@ -499,20 +513,27 @@ class Game:
                 if event.play_text.find('Substitution:') > -1:
                     subbed_in_player = players[0]
                     subbed_out_player = players[1]
-                    if subbed_in_player not in players_used:
-                        players_used.append(subbed_in_player)
-                    if subbed_out_player not in subs_used:
-                        subs_used.append(subbed_out_player)
+                    team = self.player_team(subbed_in_player)
+                    if team == self.home_team and len(home_players_used) < 5:
+                        home_players_used.add(subbed_in_player)
+                    if team == self.away_team and len(away_players_used) < 5:
+                        away_players_used.add(subbed_in_player)
+
+                    subs_used.add(subbed_out_player)
                 else:
                     for player in players:
-                        if player not in subs_used and player not in players_used:
-                            players_used.append(player)
+                        if player not in subs_used and player not in home_players_used and player not in away_players_used:
+                            team = self.player_team(player)
+                            if team == self.home_team and len(home_players_used) < 5:
+                                home_players_used.add(player)
+                            if team == self.away_team and len(away_players_used) < 5:
+                                away_players_used.add(player)
 
                 i += 1
-                if len(players_used) == 10:
+                if len(home_players_used) == 5 and len(away_players_used) == 5:
                     done = True
 
-            quarter_enders[q] = players_used
+            quarter_enders[q] = home_players_used | away_players_used
 
         return quarter_enders
 
