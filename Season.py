@@ -262,7 +262,6 @@ class Season:
 
         return ortg
 
-
     def player_drtg(self, player, start_date=None, end_date=None):
 
         games_played = self.get_player_games_in_range(player, start_date, end_date)
@@ -310,7 +309,7 @@ class Season:
             team_drb += team_data['rebounds']['defensive']
             team_pf += team_data['personalFouls']
 
-            team_pos += team_data['team_pos']
+            team_pos += game.possessions(team)
 
             opp_fta += opponent_data['freeThrows']['attempted']
             opp_ftm += opponent_data['freeThrows']['made']
@@ -359,7 +358,7 @@ class Season:
 
             team = game.player_team(player)
             player_data = game.player_boxscore(player)
-            team_data = game.team_boxscore(team)
+            team_data = game.team_boxscore(team)['teamStats']
 
             fga += player_data['fieldGoals']['attempted']
             fta += player_data['freeThrows']['attempted']

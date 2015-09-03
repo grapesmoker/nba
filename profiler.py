@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 
+import pymongo
+import numpy as np
+
 from Game import Game
 from Player import Player
 from Team import Team
+from Season import Season
 
 from pprint import pprint
 from utils import compute_ts_length, pretty_print_times
 from analysis import regression
+from analysis.features import player_ocluster_features
+from settings import players
 
 def test_single_game_rapm():
 
@@ -63,6 +69,28 @@ def test_player_time():
     print 'minutes played: {0:2.3f}'.format(compute_ts_length(sh) / 60.0)
     pretty_print_times(sh)
 
+def test_features():
+
+    season = Season(2013)
+    player = Player(399725)
+
+    features = player_ocluster_features(player, season)
+
+def test_all_player_features(self):
+
+    season = Season(2013)
+
+    all_players = players.find({}).sort('id', pymongo.ASCENDING)
+    offensive_features = []
+
+    for player_data in all_players:
+        player = Player(player_data['id'])
+        print 'Extracting offensive features for {} from the {}'.format(player, season)
+        features = player_ocluster_features(player, season)
+        offensive_features.append(features)
+
+    offensive_features = np.array(offensive_features)
+
 if __name__ == '__main__':
     #test_single_lineup()
-    test_player_time()
+    test_features()

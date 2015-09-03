@@ -1,5 +1,17 @@
 __author__ = 'jerry'
 
+import numpy as np
+import matplotlib.pyplot as mpl
+import pandas as pd
+
+from sklearn.mixture import GMM
+from sklearn.cluster import AffinityPropagation, DBSCAN, KMeans, Ward
+from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import MDS
+
+from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
+
+from Player import Player
 
 def cluster_players_offense(output_filename):
 
@@ -31,7 +43,9 @@ def cluster_players_defense(output_filename):
 
 def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
 
-    data = pylab.genfromtxt(data_file, delimiter=',')
+    dtype = [('id', '<i16'), ('ast_pct', '<f8'), ('ts_pct', '<f8'), ('orb_pct', '<f8'),
+             ('usg', '<f8'), ('ortg', '<f8'), ('mp_pct', '<f8')]
+    data = np.genfromtxt(data_file, delimiter=',', names=True, dtype=dtype)
     ids = data[:, 0]
     team_features = data[:, 1:]
     scaled_features = StandardScaler().fit_transform(team_features)
@@ -50,7 +64,7 @@ def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
 
     categories = {}
 
-    for label in pylab.unique(labels):
+    for label in np.unique(labels):
         categories[label] = []
 
     for label, team_id in zip(labels, ids):
@@ -104,21 +118,26 @@ def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
 
 def compute_player_clusters(data_file, clusters=10, method='GMM', plot=False):
 
-    data = pylab.genfromtxt(data_file, delimiter=',')
-    ids = data[:, 0]
-    player_features = data[:, 1:]
+    data = pd.read_csv(data_file, delimiter=',', index_col=0)
+    data = data[data.mp_pct > 0]
 
-    non_empty_indices = pylab.where(pylab.any(player_features != 0, axis=1))
+    scaled_features = StandardScaler().fit_transform(data)
 
-    non_empty_features = player_features[non_empty_indices]
-    non_empty_ids = ids[non_empty_indices]
-    scaled_features = StandardScaler().fit_transform(non_empty_features)
+    print scaled_features
 
     #sims = euclidea_ndistances(non_empty_features)
     #print sims
-    sims = player_feature_sim_matrix(non_empty_features)
+
+    print 'Calculating player similarity matrix'
+
+    if method != 'GMM':
+        sims = player_feature_sim_matrix(data)
+    else:
+        sims = []
 
     cluster_obj = None
+
+    print 'Clustering using {}'.format(method)
 
     if method == 'Affinity':
 
@@ -130,7 +149,7 @@ def compute_player_clusters(data_file, clusters=10, method='GMM', plot=False):
 
     if method == 'KMeans':
 
-        km = KMeans(n_clusters=clusters).fit(non_empty_features)
+        km = KMeans(n_clusters=clusters).fit(scaled_features)
         labels = km.labels_
         cluster_obj = km
 
@@ -169,29 +188,31 @@ def compute_player_clusters(data_file, clusters=10, method='GMM', plot=False):
 
         pos = res.embedding_
         offset_radius = 10
-        cluster_thetas = pylab.linspace(0, 2 * pylab.pi, clusters + 1)[0:clusters]
-        cluster_vectors = [(offset_radius * pylab.cos(theta), offset_radius * pylab.sin(theta)) for theta in cluster_thetas]
-        player_names = [' '.join(look_up_player_name(player_id)) for player_id in non_empty_ids]
+        cluster_thetas = np.linspace(0, 2 * np.pi, clusters + 1)[0:clusters]
+        cluster_vectors = [(offset_radius * np.cos(theta), offset_radius * np.sin(theta)) for theta in cluster_thetas]
+        player_names = [str(Player(player_id)) for player_id in data.index]
+
+        #player_names = [' '.join(look_up_player_name(player_id)) for player_id in non_empty_ids]
 
         for i, coords in enumerate(pos):
             label = labels[i]
-            player_id = non_empty_ids[i]
+            player_id = data.index[i]
             color = cm(norm(label))
             offset = cluster_vectors[label]
             mpl.plot(coords[0] + offset[0], coords[1] + offset[1], color=color, marker='o', label=player_names[i])
 
-        datacursor(formatter='{label}'.format)
+        #datacursor(formatter='{label}'.format)
 
         mpl.show()
 
     categories = {}
 
-    for label in pylab.unique(labels):
+    for label in np.unique(labels):
         categories[label] = []
 
-    for label, player_id in zip(labels, non_empty_ids):
-        fn, ln = look_up_player_name(int(player_id))
-        categories[label].append((int(player_id), ' '.join((fn, ln))))
+    for label, player_id in zip(labels, data.index):
+        player = Player(player_id)
+        categories[label].append((int(player_id), str(player)))
 
     return categories, cluster_obj
 
@@ -306,20 +327,15 @@ def compare_players_defense(p1, p2, weights=None):
 
 def player_feature_sim(p1, p2, weights=None):
 
-    if p1[0] > 1000:
-        p1 = p1[1:]
-    if p2[0] > 1000:
-        p2 = p2[1:]
-
     if weights is None:
-        weights = pylab.ones(len(p1))
+        weights = np.ones(len(p1))
 
-    s = pylab.array([w * ((abs(x - y) / abs(x + y)))**2 for x, y, w in zip(p1, p2, weights)])
+    s = np.array([w * ((abs(x - y) / abs(x + y)))**2 for x, y, w in zip(p1, p2, weights)])
     #s = pylab.array([w * (x + y) / (x * y) for x, y, w in zip(p1, p2, weights)])
 
-    d = pylab.sqrt(pylab.sum(s))
+    d = np.sqrt(np.sum(s))
 
-    if pylab.isnan(d):
+    if np.isnan(d):
         d = 0
 
     return d
@@ -327,11 +343,15 @@ def player_feature_sim(p1, p2, weights=None):
 def player_feature_sim_matrix(feature_matrix, feature_weights=None):
 
     shape = feature_matrix.shape
-    sims = pylab.zeros((shape[0], shape[0]))
+    #print shape
+    #print feature_matrix
+    sims = np.zeros((shape[0], shape[0]))
 
-    for i, p1 in enumerate(feature_matrix):
-        for j, p2 in enumerate(feature_matrix):
-            sims[i][j] = player_feature_sim(p1, p2, weights=None)
+    for i in range(0, shape[0]):
+        player1 = feature_matrix.iloc[i]
+        for j in range(0, shape[0]):
+            player2 = feature_matrix.iloc[j]
+            sims[i][j] = player_feature_sim(player1, player2, weights=None)
 
     return sims
 

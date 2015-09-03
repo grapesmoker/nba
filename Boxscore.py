@@ -2,6 +2,8 @@ __author__ = 'jerry'
 
 import re
 
+from pprint import pprint
+
 empty_team_boxscore = {
     'threePointFieldGoals': {
         'attempted': 0,
@@ -119,16 +121,18 @@ class Boxscore(dict):
             return '_' + match.group(0).lower()
 
         for key, value in data.items():
-            if isinstance(value, int) or isinstance(value, float) or isinstance(value, str) or isinstance(value, bool):
-                new_key = re.sub('([A-Z]|[0-9])', lowercase_and_uscore, key)
-                setattr(self, new_key, value)
-            elif isinstance(value, dict):
-                for subkey, subvalue in value.items():
-                    new_key = re.sub('[A-Z]', lowercase_and_uscore, key) + '_' + \
-                              re.sub('[A-Z]', lowercase_and_uscore, subkey)
-                    setattr(self, new_key, subvalue)
-            else:
-                raise TypeError('Unknown type encountered in JSON!')
+            if key != 'lineups':
+                if isinstance(value, int) or isinstance(value, float) or isinstance(value, str) or isinstance(value, bool):
+                    new_key = re.sub('([A-Z]|[0-9])', lowercase_and_uscore, key)
+                    setattr(self, new_key, value)
+                elif isinstance(value, dict):
+                    for subkey, subvalue in value.items():
+                        new_key = re.sub('[A-Z]', lowercase_and_uscore, key) + '_' + \
+                                  re.sub('[A-Z]', lowercase_and_uscore, subkey)
+                        setattr(self, new_key, subvalue)
+                else:
+                    pprint(data)
+                    raise TypeError('Unknown type encountered in JSON!')
 
     def add_dicts(self_dict, other_dict):
         pass
@@ -149,12 +153,15 @@ class PlayerBoxscore(Boxscore):
             retval = PlayerBoxscore(empty_player_boxscore)
             for key in self.__dict__:
                 newval = getattr(self, key)
-                if key == 'player_player_id':
-                    setattr(retval, key, newval)
-                elif isinstance(newval, int) or isinstance(newval, float):
-                    newval += getattr(other, key)
-                    setattr(retval, key, newval)
-                elif isinstance(newval, str):
+                if key in other.__dict__:
+                    if key == 'player_player_id':
+                        setattr(retval, key, newval)
+                    elif isinstance(newval, int) or isinstance(newval, float):
+                        newval += float(getattr(other, key))
+                        setattr(retval, key, newval)
+                    elif isinstance(newval, str):
+                        setattr(retval, key, newval)
+                else:
                     setattr(retval, key, newval)
             return retval
         else:
@@ -176,12 +183,15 @@ class TeamBoxscore(Boxscore):
             retval = TeamBoxscore(empty_team_boxscore)
             for key in self.__dict__:
                 newval = getattr(self, key)
-                if key == 'player_player_id':
-                    setattr(retval, key, newval)
-                elif isinstance(newval, int) or isinstance(newval, float):
-                    newval += getattr(other, key)
-                    setattr(retval, key, newval)
-                elif isinstance(newval, str):
+                if key in other.__dict__:
+                    if key == 'player_player_id':
+                        setattr(retval, key, newval)
+                    elif isinstance(newval, int) or isinstance(newval, float):
+                        newval += float(getattr(other, key))
+                        setattr(retval, key, newval)
+                    elif isinstance(newval, str):
+                        setattr(retval, key, newval)
+                else:
                     setattr(retval, key, newval)
             return retval
         else:

@@ -4,6 +4,8 @@ __author__ = 'jerry'
 
 import datetime as dt
 
+from pprint import pprint
+
 from Boxscore import PlayerBoxscore, TeamBoxscore
 
 def team_ocluster_features(team_id, start_date=dt.date(2012, 10, 27), end_date=dt.date(2013, 4, 17)):
@@ -69,53 +71,59 @@ def player_ocluster_features(player, season, start_date=None, end_date=None):
     team_pos = 0
     opp_drb = 0
 
+    #import pdb; pdb.set_trace();
+
     for i, game in enumerate(games_played):
 
         game_p_boxscore = game.player_boxscore(player)
         player_boxscore = player_boxscore + PlayerBoxscore(game_p_boxscore)
         team = game.player_team(player)
         opponent = game.opponent(team)
-        game_t_boxscore = game.team_boxscore(team)
+        game_t_boxscore = game.team_boxscore(team)['teamStats']
+        game_o_boxscore = game.team_boxscore(opponent)['teamStats']
         team_boxscore = team_boxscore + TeamBoxscore(game_t_boxscore)
-        opp_boxscore = opp_boxscore + game.team_boxscore(opponent)
+        opp_boxscore = opp_boxscore + TeamBoxscore(game_o_boxscore)
 
         team_pos += game.possessions(team)
 
     try:
+        mp = player_boxscore.total_seconds_played / 60.0
 
-        ast = player_boxscore.assists
-        fgm = player_boxscore.field_goals_made
-        fga = player_boxscore.field_goals_attempted
-        ftm = player_boxscore.free_throws_made
-        fta = player_boxscore.free_throws_attempted
-        tov = player_boxscore.turnovers
-        tpa = player_boxscore.three_point_field_goals_attempted
-        tpm = player_boxscore.three_point_field_goals_made
-        orb = player_boxscore.rebounds_offensive
-        pts = player_boxscore.points
-        mp = player_boxscore.total_seconds_player / 60.0
+        if mp > 0:
+            ast = player_boxscore.assists
+            fgm = player_boxscore.field_goals_made
+            fga = player_boxscore.field_goals_attempted
+            ftm = player_boxscore.free_throws_made
+            fta = player_boxscore.free_throws_attempted
+            tov = player_boxscore.turnovers
+            tpa = player_boxscore.three_point_field_goals_attempted
+            tpm = player_boxscore.three_point_field_goals_made
+            orb = player_boxscore.rebounds_offensive
+            pts = player_boxscore.points
 
-        team_pts = team_boxscore.points
-        team_mp = team_boxscore.minutes
-        team_fgm = team_boxscore.field_goals_made
-        team_pts = team_boxscore.points
-        team_orb = team_boxscore.rebounds_offensive
-        opp_drb = opp_boxscore.rebounds_defensive
+            team_pts = team_boxscore.points
+            team_mp = team_boxscore.minutes
+            team_fgm = team_boxscore.field_goals_made
+            team_pts = team_boxscore.points
+            team_orb = team_boxscore.rebounds_offensive
+            opp_drb = opp_boxscore.rebounds_defensive
 
-        team_ortg = 100 * team_pts / team_pos
+            team_ortg = 100 * team_pts / team_pos
 
-        ast_pct = 100 * ast / (((mp / (team_mp / 5)) * team_fgm) - fgm)
-        ts_pct = pts / (2 * (fga + 0.44 * fta))
-        orb_pct = 100 * (orb * (team_mp / 5)) / (mp * (team_orb + opp_drb))
-        mp_pct = 100 * mp / (team_mp / 5)
-        usg = season.player_usage(player, start_date, end_date)
-        ortg = season.player_ortg(player, start_date, end_date)
+            ast_pct = 100 * ast / (((mp / (team_mp / 5)) * team_fgm) - fgm)
+            ts_pct = pts / (2 * (fga + 0.44 * fta))
+            orb_pct = 100 * (orb * (team_mp / 5)) / (mp * (team_orb + opp_drb))
+            mp_pct = 100 * mp / (team_mp / 5)
+            usg = season.player_usage(player, start_date, end_date)
+            ortg = season.player_ortg(player, start_date, end_date)
 
-        #print team_ortg, ortg
+            #print team_ortg, ortg
 
-        ortg_pct = 100 * (1 + (ortg - team_ortg)  / team_ortg)
+            ortg_pct = 100 * (1 + (ortg - team_ortg) / team_ortg)
 
-        features = [player.id, ast_pct, ts_pct, orb_pct, usg, ortg, mp_pct]
+            features = [player.id, ast_pct, ts_pct, orb_pct, usg, ortg, mp_pct]
+        else:
+            features = [player.id, 0, 0, 0, 0, 0, 0]
 
     except Exception as ex:
         print ex
@@ -124,73 +132,71 @@ def player_ocluster_features(player, season, start_date=None, end_date=None):
 
     return features
 
-def player_dcluster_features(player_id, start_date=dt.date(2012, 10, 27), end_date=dt.date(2013, 4, 17)):
 
-    games_played = games_played_pbp(player_id, start_date, end_date)
+def player_dcluster_features(player, season, start_date=None, end_date=None):
 
-    drb = 0
-    pf = 0
-    mp = 0
-    stl = 0
-    blk = 0
+    games_played = season.get_player_games_in_range(player, start_date=start_date, end_date=end_date)
 
-    team_mp = 0
-    team_blk = 0
-    team_stl = 0
-    team_drb = 0
-    team_pf = 0
-
+    player_boxscore = PlayerBoxscore()
+    team_boxscore = TeamBoxscore()
+    opp_boxscore = TeamBoxscore()
     team_pos = 0
-
-    opp_fta = 0
-    opp_ftm = 0
-    opp_fga = 0
-    opp_fgm = 0
-    opp_orb = 0
-    opp_pts = 0
-    opp_tov = 0
-    opp_mp = 0
-    opp_3pa = 0
     opp_pos = 0
 
     for i, game in enumerate(games_played):
-        game_id = int(game['playbyplay']['contest']['id'])
 
-        player_data, team_data = player_drtg(game_id, player_id, return_data=True)
+        game_p_boxscore = game.player_boxscore(player)
+        player_boxscore = player_boxscore + PlayerBoxscore(game_p_boxscore)
+        team = game.player_team(player)
+        opponent = game.opponent(team)
+        game_t_boxscore = game.team_boxscore(team)['teamStats']
+        game_o_boxscore = game.team_boxscore(opponent)['teamStats']
+        team_boxscore = team_boxscore + TeamBoxscore(game_t_boxscore)
+        opp_boxscore = opp_boxscore + TeamBoxscore(game_o_boxscore)
 
-        drb += player_data['drb']
-        pf += player_data['pf']
-        stl += player_data['stl']
-        blk += player_data['blk']
-        mp += player_data['mp']
-
-        opp_fta += team_data['opp_fta']
-        opp_ftm += team_data['opp_ftm']
-        opp_fga += team_data['opp_fga']
-        opp_fgm += team_data['opp_fgm']
-        opp_pts += team_data['opp_pts']
-        opp_orb += team_data['opp_orb']
-        opp_3pa += team_data['opp_3pa']
-        opp_pos += team_data['opp_pos']
-
-        team_drb += team_data['team_drb']
-        team_mp += team_data['team_mp']
-        team_pf += team_data['team_pf']
+        team_pos += game.possessions(team)
+        opp_pos += game.possessions(opponent)
 
     try:
+        mp = player_boxscore.total_seconds_played / 60.0
 
-        blk_pct = 100 * (blk * (team_mp / 5)) / (mp * (opp_fga - opp_3pa))
-        stl_pct = 100 * (stl * (team_mp / 5)) / (mp * opp_pos)
-        drb_pct = 100 * (drb * (team_mp / 5)) / (mp * (team_drb + opp_orb))
-        pf_pct = 100 * pf / team_pf
-        mp_pct = 100 * mp / (team_mp / 5)
-        drtg = cumul_player_drtg(player_id, start_date, end_date)
+        if mp > 0:
 
-        features = [player_id, blk_pct, stl_pct, drb_pct, drtg, pf_pct, mp_pct]
+            drb = player_boxscore.rebounds_defensive
+            pf = player_boxscore.personal_fouls
+            stl = player_boxscore.steals
+            blk = player_boxscore.blocked_shots
+
+            team_mp = team_boxscore.minutes
+            team_blk = team_boxscore.blocked_shots
+            team_stl = team_boxscore.steals
+            team_drb = team_boxscore.rebounds_defensive
+            team_pf = team_boxscore.personal_fouls
+
+            opp_fta = opp_boxscore.free_throws_attempted
+            opp_ftm = opp_boxscore.free_throws_made
+            opp_fga = opp_boxscore.field_goals_attempted
+            opp_fgm = opp_boxscore.field_goals_made
+            opp_orb = opp_boxscore.rebounds_offensive
+            opp_pts = opp_boxscore.points
+            opp_tov = opp_boxscore.turnovers_total
+            opp_mp = opp_boxscore.minutes
+            opp_3pa = opp_boxscore.three_point_field_goals_attempted
+
+            blk_pct = 100 * (blk * (team_mp / 5)) / (mp * (opp_fga - opp_3pa))
+            stl_pct = 100 * (stl * (team_mp / 5)) / (mp * opp_pos)
+            drb_pct = 100 * (drb * (team_mp / 5)) / (mp * (team_drb + opp_orb))
+            pf_pct = 100 * pf / team_pf
+            mp_pct = 100 * mp / (team_mp / 5)
+            drtg = season.player_drtg(player, start_date, end_date)
+
+            features = [player.id, blk_pct, stl_pct, drb_pct, drtg, pf_pct, mp_pct]
+        else:
+            features = [player.id, 0, 0, 0, 0, 0, 0]
 
     except Exception as ex:
-
-        features = [player_id, 0, 0, 0, 0, 0, 0]
+        print ex
+        features = [player.id, 0, 0, 0, 0, 0, 0]
 
     return features
 
