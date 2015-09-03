@@ -1,16 +1,22 @@
 #!/usr/bin/env python
-from __future__ import division
+from __future__ import division, print_function
 
 import datetime as dt
 import argparse
 import json
+import pymongo
+import sys
+import re
+
 
 from tqdm import tqdm
 from utils import compute_ts_length
 from Season import Season
 from Player import Player
+from Game import Game
 
 from settings import pbp, players
+
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -45,14 +51,14 @@ team_to_espn_ids = {'Hawks': 1,
 
 def compute_all_season_lineups(year):
 
-    print 'Loading the {}-{} NBA season'.format(year, year + 1)
+    print('Loading the {}-{} NBA season'.format(year, year + 1))
     season = Season(year)
-    print 'Loaded season'
-    print 'Computing lineups for all teams in all games...'
+    print('Loaded season')
+    print('Computing lineups for all teams in all games...')
 
     for game in tqdm(season):
 
-        print 'Computing lineups for {}'.format(game)
+        print('Computing lineups for {}'.format(game))
 
         home_team = game.home_team
         away_team = game.away_team
@@ -68,21 +74,21 @@ def compute_all_season_lineups(year):
             home_minutes = compute_ts_length(home_timestream)
             away_minutes = compute_ts_length(away_timestream)
 
-            print 'Home team: {} minutes, Away team: {} minutes'.format(home_minutes, away_minutes)
+            print('Home team: {} minutes, Away team: {} minutes'.format(home_minutes, away_minutes))
 
         except Exception as ex:
-            print 'Oh no, something terrible happened while computing lineups for {}'.format(game)
-            print ex
+            print('Oh no, something terrible happened while computing lineups for {}'.format(game))
+            print(ex)
 
 
 def import_pbp(pbp_file):
 
-    print 'importing {}'.format(pbp_file)
+    print('importing {}'.format(pbp_file))
 
     json_data = json.load(open(pbp_file, 'r'))
     game_id = json_data['league']['season']['eventType'][0]['events'][0]['eventId']
 
-    print game_id
+    print(game_id)
     pbp.update({'league.season.eventType.0.events.0.eventId': game_id}, json_data, upsert=True)
 
 
@@ -92,7 +98,7 @@ def import_pbp_files(files):
         import_pbp(pbp_file)
 
 
-def calc_all_player_times(year):
+def calc_all_player_times(year, recompute=False):
 
     class TimeComputationError(Exception):
 
@@ -101,25 +107,54 @@ def calc_all_player_times(year):
         def __str__(self):
             return self.msg
 
-    all_players = players.find({})
+    all_players = players.find({}).sort('id', pymongo.ASCENDING)
 
-    print 'Loading the {}-{} NBA season'.format(year, year + 1)
+    print('Loading the {}-{} NBA season'.format(year, year + 1))
     season = Season(year)
-    print 'Loaded season'
-    print 'Computing time on court for all players in all games...'
+    print('Loaded season')
+    print('Computing time on court for all players in all games...')
 
-    for player_data in tqdm(all_players):
+    for player_data in all_players:
         player = Player(player_data['id'])
         games_played = season.get_player_games_in_range(player)
         for game in games_played:
-            print 'Calculating time on court for {} ({}) in {} ({})'.format(player, player.id, game, game.id)
-            time_on_court = player.time_on_court(game)
-            computed_minutes = compute_ts_length(time_on_court, unit='minutes')
+            print('Calculating time on court for {} ({}) in {} ({})'.format(player, player.id, game, game.id))
             boxscore_minutes = game.player_boxscore(player)['totalSecondsPlayed'] / 60.0
-            if not abs(computed_minutes - boxscore_minutes) <= 0.5:
-                raise TimeComputationError('Discrepancy between computed time: {}, and boxscore time: {}'.format(computed_minutes, boxscore_minutes))
+            if boxscore_minutes > 0:
+                time_on_court = player.time_on_court(game, recompute=recompute)
+                computed_minutes = compute_ts_length(time_on_court, unit='minutes')
             else:
-                print '{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game)
+                # there's never anything to calculate anyway
+                computed_minutes = 0
+            if not abs(computed_minutes - boxscore_minutes) <= 0.5:
+                print('In computing playing time for {} ({}) in {} ({}):'.format(player, player.id, game, game.id),
+                      file=sys.stderr)
+                print('Discrepancy between computed time: {0:2.2f}, and boxscore time: {1:2.2f}'.format(computed_minutes, boxscore_minutes),
+                      file=sys.stderr)
+                #raise TimeComputationError('Discrepancy between computed time: {}, and boxscore time: {}'.format(computed_minutes, boxscore_minutes)
+
+            else:
+                print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
+
+def fix_broken_times(err_file):
+
+    with open(err_file, 'r') as f:
+        for line in f:
+            matches = re.findall('\([\d]+\)', line)
+            if matches and matches != []:
+                ids = map(lambda x: int(x.replace('(', '').replace(')', '')), matches)
+                player_id, game_id = ids[0], ids[1]
+                player = Player(player_id)
+                game = Game(game_id)
+                print('Calculating time on court for {} ({}) in {} ({})'.format(player, player.id, game, game.id))
+                time_on_court = player.time_on_court(game, recompute=True)
+                computed_minutes = compute_ts_length(time_on_court, unit='minutes')
+                boxscore_minutes = game.player_boxscore(player)['totalSecondsPlayed'] / 60.0
+                if not abs(computed_minutes - boxscore_minutes) <= 1.0:
+                    print('In computing playing time for {} ({}) in {} ({}):'.format(player, player.id, game, game.id), file=sys.stderr)
+                    print('Discrepancy between computed time: {0:2.2f}, and boxscore time: {1:2.2f}'.format(computed_minutes, boxscore_minutes), file=sys.stderr)
+                else:
+                    print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
 
 
 if __name__ == '__main__':
@@ -147,6 +182,10 @@ if __name__ == '__main__':
 
         calc_all_player_times(2013)
 
+    if args.operation == 'fix_broken_times' and args.input_file:
+
+        fix_broken_times(args.input_file[0])
+
     if args.operation == 'scrape_data':
         season_start_date = dt.datetime(2013, 10, 29)
         season_end_date = dt.datetime(2014, 04, 17)
@@ -171,14 +210,14 @@ if __name__ == '__main__':
 
         q_starters = quarter_starters(args.game_id)
         team1, team1_id, team2, team2_id = game_teams(args.game_id)
-        print '{} vs {}'.format(team1, team2)
+        print('{} vs {}'.format(team1, team2))
 
         for q in q_starters.keys():
             player_ids = q_starters[q]
-            print 'Quarter {} starters:'.format(q)
+            print('Quarter {} starters:'.format(q))
             for player_id in player_ids:
                 fn, ln = look_up_player_name(player_id)
-                print fn, ln
+                print(fn, ln)
 
     if args.operation == 'construct_odds_csv' and args.input_file is not None and args.output_file is not None:
 

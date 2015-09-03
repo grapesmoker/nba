@@ -15,11 +15,16 @@ class Player:
         self._coll = self.__class__._coll
         self._player = self._coll.find_one({'id': player_id})
 
-        self._first_name = self._player['firstName']
-        self._last_name = self._player['lastName']
-        self._id = self._player['id']
+        try:
+            self._first_name = self._player['firstName']
+            self._last_name = self._player['lastName']
+            self._id = self._player['id']
 
-        self._add_custom_fields()
+            self._add_custom_fields()
+        except Exception as ex:
+            self._id = None
+            self._first_name = None
+            self.last_name = None
 
     def _add_custom_fields(self):
 
@@ -163,10 +168,11 @@ class Player:
     def time_on_court(self, game, recompute=False):
         empty_ts = False
         timestream = []
+
         if 'timeOnCourt' in self._player and not recompute:
-            print 'cached timestreams found'
+            #print 'cached timestreams found'
             for item in self._player['timeOnCourt']:
-                if item['gameId'] == game.id:
+                if item != [] and item['gameId'] == game.id:
                     #print 'retrieving cached timestream for {}'.format(self)
                     for t in item['times']:
                         timestream.append((dt.timedelta(seconds=t['start']), dt.timedelta(seconds=t['end'])))
@@ -175,7 +181,11 @@ class Player:
 
         if 'timeOnCourt' not in self._player or empty_ts or recompute:
 
-            print 'computing timestream for {}'.format(self)
+            if recompute:
+                self._coll.update({'id': self.id},
+                                  {'$pull': {'timeOnCourt': {'gameId': game.id}}})
+
+            #print 'computing timestream for {}'.format(self)
 
             periods = game.periods
             quarter_starters = game.quarter_starters()
@@ -190,7 +200,7 @@ class Player:
                     q_end_time = dt.timedelta(minutes=q * 12)
                 else:
                     q_start_time = dt.timedelta(minutes=48 + (q - 5) * 5)
-                    q_end_time = dt.timedelta(minutes=q * 5)
+                    q_end_time = dt.timedelta(minutes=48 + ((q - 4) * 5))
 
                 if self in quarter_starters[q]:
                     times_subbed_in.append(q_start_time)
@@ -223,6 +233,17 @@ class Player:
 
 
         return timestream
+
+    def save_timestream(self, game, timestream):
+
+        self._coll.update({'id': self.id},
+                          {'$pull': {'timeOnCourt': {'gameId': game.id}}})
+
+        time_data = [{'start': interval[0].seconds, 'end': interval[1].seconds}
+                     for interval in timestream]
+
+        time_on_court = {'gameId': game.id, 'times': time_data}
+        self._coll.update_one({'id': self.id}, {'$addToSet': {'timeOnCourt': time_on_court}})
 
     def subbed_in_at_quarter(self, game):
 

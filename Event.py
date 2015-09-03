@@ -7,6 +7,7 @@ from settings import pbp
 from Player import Player
 from scipy.spatial.distance import euclidean
 
+
 class Event:
 
     _coll = pbp
@@ -32,6 +33,7 @@ class Event:
     def __init__(self, play_data):
         self._coll = self.__class__._coll
         self._play_data = play_data
+        self._id = int(self._play_data['playId'])
 
     @property
     def play_time(self):
@@ -57,11 +59,20 @@ class Event:
 
     @property
     def id(self):
-        return int(self._play_data['id'])
+        return int(self._id)
+
+    @property
+    def event_id(self):
+        return self._id
 
     @property
     def players(self):
-        return [Player(player['playerId']) for player in self._play_data['players']]
+        result = []
+        for player in self._play_data['players']:
+            event_player = Player(player['playerId'])
+            if event_player.id is not None:
+                result.append(event_player)
+        return result
 
     @property
     def shot_coordinates(self):
@@ -103,9 +114,14 @@ class Event:
             return False
 
     def __cmp__(self, other):
+
         if self.play_time == other.play_time:
             if self.id == other.id:
                 return 0
+            elif self.is_substitution and not other.is_substitution:
+                return 1
+            elif other.is_substitution and not self.is_substitution:
+                return -1
             elif self.id < other.id:
                 return -1
             elif self.id > other.id:
@@ -115,6 +131,13 @@ class Event:
             return -1
         elif self.play_time > other.play_time:
             return 1
+
+        # if self.event_id == other.event_id:
+        #     return 0
+        # elif self.event_id < other.event_id:
+        #     return -1
+        # elif self.event_id > other.event_id:
+        #     return 1
 
     def __str__(self):
         return '<{0}: {1}>'.format(str(self.play_time), self.play_text)
@@ -164,6 +187,13 @@ class Event:
     @property
     def is_foul(self):
         return self.play_type_id == self.__class__._event_ids['Foul']
+
+    @property
+    def is_technical(self):
+        if self.is_foul and self._play_data['playEvent']['playDetail']['name'].find('Technical') > -1:
+            return True
+        else:
+            return False
 
     @property
     def is_violation(self):

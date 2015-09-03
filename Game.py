@@ -447,9 +447,11 @@ class Game:
         starting_lineup = set([player[0] for player in
                            [event.players for event in self._events if event.play_text == 'Starting Lineup']])
 
+        periods = self.periods
+
         quarter_starters = {1: starting_lineup}
 
-        for q in (2, 3, 4):
+        for q in range(2, periods + 1):
 
             quarter_plays = sorted([ev for ev in self._events if ev.period == q])
 
@@ -470,13 +472,13 @@ class Game:
                     subbed_out_player = players[1]
                     subs_used.add(subbed_in_player)
                     team = self.player_team(subbed_out_player)
-                    if team == self.home_team and len(home_players_used) < 5:
+                    if team == self.home_team and len(home_players_used) < 5 and subbed_out_player not in subs_used:
                         home_players_used.add(subbed_out_player)
-                    if team == self.away_team and len(away_players_used) < 5:
+                    if team == self.away_team and len(away_players_used) < 5 and subbed_out_player not in subs_used:
                         away_players_used.add(subbed_out_player)
-                else:
+                elif not event.is_technical:
                     for player in players:
-                        if player not in subs_used and player not in home_players_used and player not in away_players_used:
+                        if player not in subs_used:
                             team = self.player_team(player)
                             if team == self.home_team and len(home_players_used) < 5:
                                 home_players_used.add(player)
@@ -495,7 +497,9 @@ class Game:
 
         quarter_enders = {}
 
-        for q in [1, 2, 3, 4]:
+        periods = self.periods
+
+        for q in range(1, periods + 1):
 
             quarter_plays = sorted([ev for ev in self._events if ev.period == q], reverse=True)
 
@@ -514,37 +518,43 @@ class Game:
                     subbed_in_player = players[0]
                     subbed_out_player = players[1]
                     team = self.player_team(subbed_in_player)
-                    if team == self.home_team and len(home_players_used) < 5:
+                    if team == self.home_team and len(home_players_used) < 5 and subbed_in_player not in subs_used:
                         home_players_used.add(subbed_in_player)
-                    if team == self.away_team and len(away_players_used) < 5:
+                    if team == self.away_team and len(away_players_used) < 5 and subbed_in_player not in subs_used:
                         away_players_used.add(subbed_in_player)
 
                     subs_used.add(subbed_out_player)
-                else:
+                #else:
+                elif not event.is_technical:
                     for player in players:
-                        if player not in subs_used and player not in home_players_used and player not in away_players_used:
+                        if player not in subs_used:
                             team = self.player_team(player)
                             if team == self.home_team and len(home_players_used) < 5:
                                 home_players_used.add(player)
                             if team == self.away_team and len(away_players_used) < 5:
                                 away_players_used.add(player)
 
+                # if q == 2:
+                #      print event, event.event_id
+                #      print 'home:', home_players_used
+                #      print 'away:', away_players_used
+                #      print 'subs:', subs_used
+
                 i += 1
                 if len(home_players_used) == 5 and len(away_players_used) == 5:
                     done = True
 
             quarter_enders[q] = home_players_used | away_players_used
-
         return quarter_enders
 
     @classmethod
-    def look_up_game(cls, game_day, team_id):
+    def look_up_game(cls, game_day, team):
 
         game = cls._coll.find_one({'league.season.eventType.0.events.0.startDate.0.month': game_day.month,
                                    'league.season.eventType.0.events.0.startDate.0.year': game_day.year,
                                    'league.season.eventType.0.events.0.startDate.0.date': game_day.day,
-                                   '$or': [{'league.season.eventType.0.events.0.teams.0.teamId': team_id},
-                                           {'league.season.eventType.0.events.0.teams.1.teamId': team_id}]})
+                                   '$or': [{'league.season.eventType.0.events.0.teams.0.teamId': team.id},
+                                           {'league.season.eventType.0.events.0.teams.1.teamId': team.id}]})
     
         if game is not None:
             return Game(game['league']['season']['eventType'][0]['events'][0]['eventId'])

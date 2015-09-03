@@ -296,3 +296,7 @@ def compute_ts_length(ts, unit='seconds'):
         return seconds / 60.0
     else:
         return seconds
+
+def insert_custom_ts(player, timestream):
+
+    pass

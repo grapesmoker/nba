@@ -5,7 +5,7 @@ from Player import Player
 from Team import Team
 
 from pprint import pprint
-
+from utils import compute_ts_length, pretty_print_times
 from analysis import regression
 
 def test_single_game_rapm():
@@ -38,6 +38,31 @@ def test_single_lineup():
     print timestream
     pprint(box_score.__dict__)
 
+def test_player_time():
+
+    game = Game(1349050)
+
+    quarter_plays = sorted([ev for ev in game.events if ev.period == 1], reverse=True)
+    for play in quarter_plays:
+        print play, play.event_id
+    game.quarter_enders()[1]
+
+    ev1 = quarter_plays[5]
+    ev2 = quarter_plays[7]
+    #import pdb; pdb.set_trace();
+    # print ev1, ev1.id
+    # print ev2, ev2.id
+    #
+    # print ev1 > ev2
+    # print ev1.__cmp__(ev2)
+
+    player = Player(3102)
+
+    sh = player.time_on_court(game, recompute=True)
+    print '{} in {}'.format(player, game)
+    print 'minutes played: {0:2.3f}'.format(compute_ts_length(sh) / 60.0)
+    pretty_print_times(sh)
+
 if __name__ == '__main__':
     #test_single_lineup()
-    test_single_game_rapm()
+    test_player_time()
