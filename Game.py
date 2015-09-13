@@ -62,7 +62,8 @@ class Game:
         self._core_data = data['league']['season']['eventType'][0]['events'][0]
         self._id = self._core_data['eventId']
         self._game_type = data['league']['season']['eventType'][0]['name']
-        self._date = dt.datetime.strptime(self._core_data['startDate'][0]['full'], '%Y-%m-%dT%H:%M:%S')
+        date_string = self._core_data['startDate'][0]['full'].split('T')[0]
+        self._date = dt.datetime.strptime(date_string, '%Y-%m-%d')
         self._teams = self._core_data['teams']
         self._home_team = self._teams[0]
         self._away_team = self._teams[1]
@@ -104,7 +105,7 @@ class Game:
     def __str__(self):
         home_team_name = self._home_team['location'] + ' ' + self._home_team['nickname']
         away_team_name = self._away_team['location'] + ' ' + self._away_team['nickname']
-        return '{0} vs {1} on {2!s}'.format(home_team_name, away_team_name, self._date)
+        return '{0} vs {1} on {2!s}'.format(home_team_name, away_team_name, self.date.strftime('%Y-%m-%d'))
 
     def __repr__(self):
         return self.__str__()
@@ -284,6 +285,15 @@ class Game:
     @property
     def away_ortg(self):
         return 100 * self.away_boxscore['teamStats']['points'] / self.away_possessions
+
+    @property
+    def home_points(self):
+        return int(self.home_boxscore['teamStats']['points'])
+
+    @property
+    def away_points(self):
+        return int(self.away_boxscore['teamStats']['points'])
+
 
     def __contains__(self, player_or_team):
 

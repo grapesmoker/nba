@@ -14,7 +14,8 @@ from Season import Season
 
 from settings import players
 
-from analysis.features import player_ocluster_features, player_dcluster_features
+from analysis.features import *
+from analysis.clustering import *
 
 class TestFeatures(TestCase):
 
@@ -73,3 +74,30 @@ class TestFeatures(TestCase):
 
         self.assertTrue(os.path.exists(o_features_file))
         self.assertTrue(os.path.exists(d_features_file))
+
+    def test_team_ocluster_features(self):
+
+        season = Season(2013)
+        team = Team(12)
+
+        features = team_ocluster_features(team, season)
+        print features
+        self.assertEqual(1, 1)
+
+    def test_team_dcluster_features(self):
+
+        season = Season(2013)
+        team = Team(12)
+
+        features = team_dcluster_features(team, season)
+        print features
+        self.assertEqual(1, 1)
+
+    def test_construct_global_features(self):
+
+        season = Season(2013)
+
+        construct_global_features(season)
+
+        self.assertEqual(1, 1)
+

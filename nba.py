@@ -6,8 +6,12 @@ import argparse
 import json
 import pymongo
 import sys
+import os
 import re
+import dateutil.parser as dtparser
+import pandas as pd
 
+import matplotlib.pyplot as mpl
 
 from tqdm import tqdm
 from utils import compute_ts_length
@@ -16,7 +20,8 @@ from Player import Player
 from Game import Game
 
 from settings import pbp, players
-
+from analysis.features import construct_global_features, construct_all_features
+from analysis.prediction import predict_game_outcome, predict_game_day, predict_all_games
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -136,6 +141,7 @@ def calc_all_player_times(year, recompute=False):
             else:
                 print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
 
+
 def fix_broken_times(err_file):
 
     with open(err_file, 'r') as f:
@@ -157,6 +163,11 @@ def fix_broken_times(err_file):
                     print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
 
 
+def compute_global_features(season, start_date=None, end_date=None, output_file=None):
+
+    pass
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -167,6 +178,12 @@ if __name__ == '__main__':
     parser.add_argument('-gid', '--game_id', dest='game_id', type=int)
     parser.add_argument('-if', '--input_file', dest='input_file', nargs='*')
     parser.add_argument('-of', '--output_file', dest='output_file')
+    parser.add_argument('--game-date', dest='game_date')
+    parser.add_argument('--start-date', dest='start_date')
+    parser.add_argument('--end-date', dest='end_date')
+    parser.add_argument('--season', dest='season', type=int)
+    parser.add_argument('--method', dest='method', default='LogReg')
+    parser.add_argument('--window', dest='window', type=int, default=20)
     
     args = parser.parse_args()
 
@@ -185,6 +202,119 @@ if __name__ == '__main__':
     if args.operation == 'fix_broken_times' and args.input_file:
 
         fix_broken_times(args.input_file[0])
+
+    if args.operation == 'construct_global_features' and args.season:
+
+        season = Season(args.season)
+
+        if args.start_date:
+            start_date = dtparser.parse(args.start_date)
+        else:
+            start_date = season.start_date
+
+        if args.end_date:
+            end_date = dtparser.parse(args.end_date)
+        else:
+            end_date = season.end_date
+
+        str_format = '%Y-%m-%d'
+
+        if args.output_file:
+            output_file = args.output_file
+        else:
+            path = 'features-from-{}-to-{}'.format(start_date.strftime(str_format), end_date.strftime(str_format))
+            output_file = os.path.join('season_data', str(season.season), path)
+
+        print('Constructing global features for {}'.format(season))
+
+        construct_global_features(season, start_date=start_date, end_date=end_date, output_file=output_file)
+
+    if args.operation == 'construct_all_features' and args.season:
+
+        season = Season(args.season)
+
+        if args.window:
+            window = args.window
+        else:
+            window = 20
+
+        construct_all_features(season, window_size=window)
+
+    if args.operation == 'predict_game' and args.season and args.game_id:
+
+        season = Season(args.season)
+        game = Game(args.game_id)
+
+        if args.start_date:
+            start_date = dtparser.parse(args.start_date)
+        else:
+            start_date = season.start_date
+
+        if args.end_date:
+            end_date = dtparser.parse(args.end_date)
+        else:
+            end_date = season.end_date
+
+        str_format = '%Y-%m-%d'
+
+        if args.input_file:
+            input_file = args.input_file
+        else:
+            path = 'features-from-{}-to-{}'.format(start_date.strftime(str_format), end_date.strftime(str_format))
+            input_file = os.path.join('season_data', str(season.season), path)
+
+        if os.path.exists(input_file):
+            predict_game_outcome(input_file, game, season)
+        else:
+            print('Only precomputed features currently supported!')
+
+    if args.operation == 'predict_game' and args.season and args.game_date:
+
+        season = Season(args.season)
+        game_date = dtparser.parse(args.game_date)
+
+        if args.start_date:
+            start_date = dtparser.parse(args.start_date)
+        else:
+            start_date = season.start_date
+
+        if args.end_date:
+            end_date = dtparser.parse(args.end_date)
+        else:
+            end_date = season.end_date
+
+        if args.method:
+            method = args.method
+        else:
+            method = 'LogReg'
+
+        predict_game_day(game_date, season, start_date, end_date, method=method)
+
+    if args.operation == 'predict_season' and args.season:
+
+        season = Season(args.season)
+
+        results = predict_all_games(season, args.window)
+        game_ids = [res[0].id for res in results]
+
+        data = pd.DataFrame(columns=['game_id', 'home_team', 'away_team',
+                                     'predicted_margin', 'actual_margin'],
+                            index=game_ids)
+
+        for i, result in enumerate(results):
+
+            game = result[0]
+            pred_score = result[1]
+            # row = {'game_id': game.id, 'predicted_margin': pred_score[0], 'actual_margin': }
+            data.iloc[i]['game_id'] = game.id
+            data.iloc[i]['home_team'] = game.home_team.id
+            data.iloc[i]['away_team'] = game.away_team.id
+            data.iloc[i]['predicted_margin'] = pred_score[0]
+            data.iloc[i]['actual_margin'] = game.home_points - game.away_points
+
+        data.to_csv('predictions/{0}/predictions_{1}.csv'.format(season.season, method))
+
+
 
     if args.operation == 'scrape_data':
         season_start_date = dt.datetime(2013, 10, 29)

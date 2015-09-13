@@ -3,6 +3,8 @@ __author__ = 'jerry'
 import numpy as np
 import matplotlib.pyplot as mpl
 import pandas as pd
+import os
+import datetime as dt
 
 from sklearn.mixture import GMM
 from sklearn.cluster import AffinityPropagation, DBSCAN, KMeans, Ward
@@ -13,33 +15,6 @@ from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
 
 from Player import Player
 
-def cluster_players_offense(output_filename):
-
-    all_players = players.find(timeout=False)
-    writer = csv.writer(open(output_filename, 'w'))
-
-    all_features = []
-
-    for player in all_players:
-        fn, ln = look_up_player_name(player['id'])
-        print 'Generating features for {0} {1}'.format(fn, ln)
-
-        features = player_ocluster_features(player['id'])
-        writer.writerow(features)
-
-def cluster_players_defense(output_filename):
-
-    all_players = players.find(timeout=False)
-    writer = csv.writer(open(output_filename, 'w'))
-
-    all_features = []
-
-    for player in all_players:
-        fn, ln = look_up_player_name(player['id'])
-        print 'Generating features for {0} {1}'.format(fn, ln)
-
-        features = player_dcluster_features(player['id'])
-        writer.writerow(features)
 
 def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
 
@@ -116,14 +91,20 @@ def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
 
     return categories, cluster_obj
 
-def compute_player_clusters(data_file, clusters=10, method='GMM', plot=False):
 
-    data = pd.read_csv(data_file, delimiter=',', index_col=0)
-    data = data[data.mp_pct > 0]
+def compute_player_clusters(data, clusters=10, method='GMM', plot=False):
+
+    if isinstance(data, str):
+        data = pd.read_csv(data, delimiter=',', index_col=0)
+        data = data[data.mp_pct > 0]
+    elif isinstance(data, pd.DataFrame):
+        data = data
+    else:
+        raise TypeError('Incorrect type!')
 
     scaled_features = StandardScaler().fit_transform(data)
 
-    print scaled_features
+    #print scaled_features
 
     #sims = euclidea_ndistances(non_empty_features)
     #print sims
@@ -212,22 +193,21 @@ def compute_player_clusters(data_file, clusters=10, method='GMM', plot=False):
 
     for label, player_id in zip(labels, data.index):
         player = Player(player_id)
-        categories[label].append((int(player_id), str(player)))
+        categories[label].append(player)
 
     return categories, cluster_obj
 
+
 def find_member_in_clusters(clusters, member):
 
-    for cluster in clusters:
-        for p in clusters[cluster]:
-            if type(member) == str:
-                if p[1] == member:
-                    return cluster
-            if type(member) == int:
-                if p[0] == member:
-                    return cluster
-
+    for label, players in clusters.iteritems():
+        if member in players:
+            return label
     return None
+
+
+
+        
 
 def cluster_overlap(c1, c2):
 

@@ -355,7 +355,6 @@ class Season:
 
         for game in games_played:
 
-
             team = game.player_team(player)
             player_data = game.player_boxscore(player)
             team_data = game.team_boxscore(team)['teamStats']

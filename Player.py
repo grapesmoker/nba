@@ -4,6 +4,8 @@ import datetime as dt
 import numpy as np
 
 from settings import players
+from utils import compute_ts_length
+
 from drawing.player_shot_charts import create_shot_chart
 from Boxscore import PlayerBoxscore
 
@@ -244,6 +246,11 @@ class Player:
 
         time_on_court = {'gameId': game.id, 'times': time_data}
         self._coll.update_one({'id': self.id}, {'$addToSet': {'timeOnCourt': time_on_court}})
+
+    def time_played(self, game, unit='seconds'):
+
+        return compute_ts_length(self.time_on_court(game), unit=unit)
+
 
     def subbed_in_at_quarter(self, game):
 
