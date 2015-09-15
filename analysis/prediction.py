@@ -22,7 +22,7 @@ from Player import Player
 from features import *
 from clustering import *
 
-features_to_use = ['home_eff_field_goal_pct',
+features_to_use = [# 'home_eff_field_goal_pct',
                    # 'home_def_reb_pct',
                    # 'home_off_reb_pct',
                    # 'home_off_tov_pct',
@@ -45,7 +45,7 @@ features_to_use = ['home_eff_field_goal_pct',
                    # 'home_p4_def',
                    # 'home_p5_def',
                    # 'home_p6_def',
-                   'away_eff_field_goal_pct',
+                   # 'away_eff_field_goal_pct',
                    # 'away_def_reb_pct',
                    # 'away_off_reb_pct',
                    # 'away_off_tov_pct',
@@ -206,11 +206,13 @@ def predict_all_games(season, window_size=20, method='LogReg'):
         end_date = game.date - one_day
         start_date = end_date - window
 
-        features_file = os.path.join('season_data', str(season.season),
-                                     'features-from-{}-to-{}'.format(start_date.strftime(str_format),
-                                                                     end_date.strftime(str_format)))
+        #features_file = os.path.join('season_data', str(season.season),
+        #                             'features-from-{}-to-{}'.format(start_date.strftime(str_format),
+        #                                                             end_date.strftime(str_format)))
 
-        result = predict_game_outcome(features_file, game, season,
+        features = stitch_gameday_features_from_files(season.start_date, game.date, season=season.season)
+
+        result = predict_game_outcome(features, game, season,
                                       start_date=start_date, end_date=end_date, method=method)
         prediction_results.append((game, result))
 
