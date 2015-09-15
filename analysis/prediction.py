@@ -229,3 +229,52 @@ def predict_all_games(season, window_size=20, method='LogReg'):
         #     print 'result: {} (away) wins by {}'.format(game.away_team, plus_minus)
 
     return prediction_results
+
+def compare_to_odds(predictions, odds):
+
+    wins = 0
+    losses = 0
+    ties = 0
+
+    for game_id in predictions.game_id:
+
+        odds_pred = odds[odds.game_id == game_id]
+        my_pred = predictions[predictions.game_id == game_id]
+
+        #print my_pred
+        #print odds_pred.empty
+
+        if not odds_pred.empty:
+            line = odds_pred.home_line.values[0] * -1
+            pred_margin = my_pred.predicted_margin.values[0]
+            margin = my_pred.actual_margin.values[0]
+
+            game = Game(game_id)
+
+            if pred_margin - line > 0:
+                # I have picked home
+                if game.home_points > game.away_points + line:
+                    status = 'win'
+                    wins += 1
+                elif game.home_points == game.away_points + line:
+                    status = 'tie'
+                    ties += 1
+                elif game.home_points < game.away_points + line:
+                    status = 'lose'
+                    losses += 1
+            if pred_margin - line < 0:
+                # I have picked away
+                if game.home_points < game.away_points + line:
+                    status = 'win'
+                    wins += 1
+                elif game.home_points == game.away_points + line:
+                    status = 'tie'
+                    ties += 1
+                elif game.home_points > game.away_points + line:
+                    status = 'lose'
+                    losses += 1
+
+
+            #print game, game_id
+            #print 'line: {: 2.1f}'.format(line), 'predicted: {: 2.1f}'.format(pred_margin), 'actual: {: 2.1f}'.format(margin), status
+    return (wins, ties, losses)
