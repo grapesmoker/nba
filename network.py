@@ -128,7 +128,9 @@ def get_odds_from_donbest(start_date, end_date):
     base = 'http://www.donbest.com/nba/odds/'
     str_format = '%Y%m%d'
 
-    odds_results = pd.DataFrame(index=dates, columns=['game_id', 'home_team', 'away_team', 'home_line'])
+    odds_results = pd.DataFrame(columns=['game_date', 'game_id', 'home_team', 'away_team', 'home_line'])
+
+    skip_dates = [dt.datetime(2014, 2, 14), dt.datetime(2014, 2, 15)]
 
     for i, date in enumerate(dates):
 
@@ -142,22 +144,32 @@ def get_odds_from_donbest(start_date, end_date):
                soup.select('.statistics_table_alternateRow')
 
         for row in rows:
+            import pdb
+            pdb.set_trace()
+            #try:
+            team_data = extract_row_info(row)
 
-            try:
-                team_data = extract_row_info(row)
-
+            if team_data:
                 home_team = team_data[0][1]
                 away_team = team_data[1][1]
                 home_line = team_data[0][0]
 
                 game = Game.Game.look_up_game(date, home_team)
 
-                odds_results.iloc[i]['game_id'] = game.id
-                odds_results.iloc[i]['home_team'] = home_team.id
-                odds_results.iloc[i]['away_team'] = away_team.id
-                odds_results.iloc[i]['home_line'] = home_line
-            except Exception as ex:
-                print 'Something went wrong extracting odds on {}'.format(date)
+                if game:
+
+                    data = {'game_date': game.date,
+                            'game_id': game.id,
+                            'home_team': home_team.id,
+                            'away_team': away_team.id,
+                            'home_line': home_line,
+                            'actual_result': game.home_points - game.away_points}
+
+                    odds_results = odds_results.append(data, ignore_index=True)
+
+            #except Exception as ex:
+            #    print ex
+            #    print 'Something went wrong extracting odds on {}'.format(date)
 
     odds_results.index.name = 'game_date'
 
@@ -189,21 +201,25 @@ def extract_row_info(row):
     home_team_nick = team_names[1].split()[-1]
     away_team_nick = team_names[0].split()[-1]
 
-    home_team_nick = home_team_nick.replace('Bobcats', 'Hornets')
-    away_team_nick = away_team_nick.replace('Bobcats', 'Hornets')
+    #home_team_nick = home_team_nick.replace('Hornets', 'Hornets')
+    #away_team_nick = away_team_nick.replace('Bobcats', 'Hornets')
     home_team_nick = home_team_nick.replace('Trailblazers', 'Trail Blazers')
     away_team_nick = away_team_nick.replace('Trailblazers', 'Trail Blazers')
 
-    print home_team_nick, 'vs', away_team_nick
+    # print home_team_nick, 'vs', away_team_nick
 
-    home_id = teams.find_one({'nickname': home_team_nick})['id']
-    away_id = teams.find_one({'nickname': away_team_nick})['id']
+    home_data = teams.find_one({'nickname': home_team_nick})
+    away_data = teams.find_one({'nickname': away_team_nick})
 
-    home_team = Team.Team(home_id)
-    away_team = Team.Team(away_id)
+    if home_data and away_data:
 
-    if odds_nums[0] < 100:
-        return [(odds_nums[0] * -1, home_team), (odds_nums[0], away_team)]
-    elif odds_nums[1] < 100:
-        return [(odds_nums[1], home_team), (odds_nums[1] * -1, away_team)]
+        home_team = Team.Team(home_data['id'])
+        away_team = Team.Team(away_data['id'])
 
+        if odds_nums[0] < 100:
+            return [(odds_nums[0] * -1, home_team), (odds_nums[0], away_team)]
+        elif odds_nums[1] < 100:
+            return [(odds_nums[1], home_team), (odds_nums[1] * -1, away_team)]
+
+    else:
+        return None
