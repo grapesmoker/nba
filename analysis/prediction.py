@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import *
 from sklearn.svm import *
 from sklearn.ensemble import *
+from sklearn.naive_bayes import *
 
 from sklearn.manifold import MDS
 
@@ -22,11 +23,11 @@ from features import *
 from clustering import *
 
 features_to_use = ['home_eff_field_goal_pct',
-                   'home_def_reb_pct',
-                   'home_off_reb_pct',
-                   'home_off_tov_pct',
-                   'home_def_tov_pct',
-                   'home_free_throw_rate',
+                   # 'home_def_reb_pct',
+                   # 'home_off_reb_pct',
+                   # 'home_off_tov_pct',
+                   # 'home_def_tov_pct',
+                   # 'home_free_throw_rate',
                    'home_def_rtg',
                    'home_off_rtg',
                    'home_days_rest',
@@ -45,11 +46,11 @@ features_to_use = ['home_eff_field_goal_pct',
                    # 'home_p5_def',
                    # 'home_p6_def',
                    'away_eff_field_goal_pct',
-                   'away_def_reb_pct',
-                   'away_off_reb_pct',
-                   'away_off_tov_pct',
-                   'away_def_tov_pct',
-                   'away_free_throw_rate',
+                   # 'away_def_reb_pct',
+                   # 'away_off_reb_pct',
+                   # 'away_off_tov_pct',
+                   # 'away_def_tov_pct',
+                   # 'away_free_throw_rate',
                    'away_def_rtg',
                    'away_off_rtg',
                    'away_days_rest',
@@ -85,7 +86,9 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
 
     training_data = data[features_to_use].values
 
-    scaled_data = StandardScaler().fit_transform(training_data)
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(training_data)
+
     home_points = data['home_points']
     away_points = data['away_points']
     plus_minus = (home_points - away_points).values
@@ -102,6 +105,8 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
         classifier = SVC()
     elif method == 'RandForest':
         classifier = RandomForestClassifier()
+    elif method == 'NaiveBayes':
+        classifier = GaussianNB()
     else:
         classifier = LinearRegression()
 
@@ -113,8 +118,10 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
     game_features = construct_global_features(season, team=home_team,
                                               start_date=start_date, end_date=end_date, game_date=game.date)
     game_features = game_features[features_to_use].values
+    scaled_features = scaler.transform(game_features)
 
-    result = classifier.predict(game_features)
+
+    result = classifier.predict(scaled_features)
     # print classifier.classes_
     # print classifier.score(scaled_data, plus_minus)
     # print game.id, result
@@ -145,7 +152,8 @@ def predict_game_day(game_date, season, start_date=None, end_date=None, method='
     data = data[data.home_off_rtg > 0]
     training_data = data[features_to_use].values
 
-    scaled_data = StandardScaler().fit_transform(training_data)
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(training_data)
     home_points = data['home_points']
     away_points = data['away_points']
     plus_minus = (home_points - away_points).values
@@ -167,7 +175,7 @@ def predict_game_day(game_date, season, start_date=None, end_date=None, method='
     #import pdb; pdb.set_trace()
     game_features = construct_global_features(season, start_date=start_date, end_date=end_date, game_date=game_date)
     game_features = game_features[features_to_use].values
-    game_features = StandardScaler().fit_transform(game_features)
+    game_features = scaler.transform(game_features)
 
     games = season.get_all_games_in_range(start_date=game_date, end_date=game_date)
     true_pm = [game.home_points - game.away_points for game in games]
@@ -202,7 +210,8 @@ def predict_all_games(season, window_size=20, method='LogReg'):
                                      'features-from-{}-to-{}'.format(start_date.strftime(str_format),
                                                                      end_date.strftime(str_format)))
 
-        result = predict_game_outcome(features_file, game, season, start_date=start_date, end_date=end_date)
+        result = predict_game_outcome(features_file, game, season,
+                                      start_date=start_date, end_date=end_date, method=method)
         prediction_results.append((game, result))
 
         # print game

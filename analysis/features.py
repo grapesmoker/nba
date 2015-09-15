@@ -16,6 +16,72 @@ from settings import players
 from clustering import compute_player_clusters, find_member_in_clusters
 from tqdm import *
 
+output_headers =                 ['home_points',
+                                      'home_eff_field_goal_pct',
+                                      'home_3_pt_pct',
+                                      'home_def_reb_pct',
+                                      'home_off_reb_pct',
+                                      'home_asst_pct',
+                                      'home_block_pct',
+                                      'home_steal_pct',
+                                      'home_off_tov_pct',
+                                      'home_def_tov_pct',
+                                      'home_free_throw_pct',
+                                      'home_free_throw_rate',
+                                      'home_def_rtg',
+                                      'home_off_rtg',
+                                      'home_days_rest',
+    ## features for individual players
+    ## 7 offensive players, ranked by minutes
+                                      'home_p0_off',
+                                      'home_p1_off',
+                                      'home_p2_off',
+                                      'home_p3_off',
+                                      'home_p4_off',
+                                      'home_p5_off',
+                                      'home_p6_off',
+    ## 7 defensive players, ranked by minutes
+                                      'home_p0_def',
+                                      'home_p1_def',
+                                      'home_p2_def',
+                                      'home_p3_def',
+                                      'home_p4_def',
+                                      'home_p5_def',
+                                      'home_p6_def',
+    ## away team
+                                      'away_points',
+                                      'away_eff_field_goal_pct',
+                                      'away_3_pt_pct',
+                                      'away_def_reb_pct',
+                                      'away_off_reb_pct',
+                                      'away_asst_pct',
+                                      'away_block_pct',
+                                      'away_steal_pct',
+                                      'away_off_tov_pct',
+                                      'away_def_tov_pct',
+                                      'away_free_throw_pct',
+                                      'away_free_throw_rate',
+                                      'away_def_rtg',
+                                      'away_off_rtg',
+                                      'away_days_rest',
+    ## features for individual players
+    ## 7 offensive players, ranked by minutes
+                                      'away_p0_off',
+                                      'away_p1_off',
+                                      'away_p2_off',
+                                      'away_p3_off',
+                                      'away_p4_off',
+                                      'away_p5_off',
+                                      'away_p6_off',
+    ## 7 defensive players, ranked by minutes
+                                      'away_p0_def',
+                                      'away_p1_def',
+                                      'away_p2_def',
+                                      'away_p3_def',
+                                      'away_p4_def',
+                                      'away_p5_def',
+                                      'away_p6_def',]
+
 def team_ocluster_features(team, season, start_date=None, end_date=None):
 
     games_played = season.get_team_games_in_range(team, start_date, end_date)
@@ -255,72 +321,6 @@ def construct_global_features(season, team=None, start_date=None, end_date=None,
     if output_file is not None and os.path.exists(output_file):
         data = pd.read_csv(output_file, index_col=0)
         return data
-
-    output_headers =                 ['home_points',
-                                      'home_eff_field_goal_pct',
-                                      'home_3_pt_pct',
-                                      'home_def_reb_pct',
-                                      'home_off_reb_pct',
-                                      'home_asst_pct',
-                                      'home_block_pct',
-                                      'home_steal_pct',
-                                      'home_off_tov_pct',
-                                      'home_def_tov_pct',
-                                      'home_free_throw_pct',
-                                      'home_free_throw_rate',
-                                      'home_def_rtg',
-                                      'home_off_rtg',
-                                      'home_days_rest',
-    ## features for individual players
-    ## 7 offensive players, ranked by minutes
-                                      'home_p0_off',
-                                      'home_p1_off',
-                                      'home_p2_off',
-                                      'home_p3_off',
-                                      'home_p4_off',
-                                      'home_p5_off',
-                                      'home_p6_off',
-    ## 7 defensive players, ranked by minutes
-                                      'home_p0_def',
-                                      'home_p1_def',
-                                      'home_p2_def',
-                                      'home_p3_def',
-                                      'home_p4_def',
-                                      'home_p5_def',
-                                      'home_p6_def',
-    ## away team
-                                      'away_points',
-                                      'away_eff_field_goal_pct',
-                                      'away_3_pt_pct',
-                                      'away_def_reb_pct',
-                                      'away_off_reb_pct',
-                                      'away_asst_pct',
-                                      'away_block_pct',
-                                      'away_steal_pct',
-                                      'away_off_tov_pct',
-                                      'away_def_tov_pct',
-                                      'away_free_throw_pct',
-                                      'away_free_throw_rate',
-                                      'away_def_rtg',
-                                      'away_off_rtg',
-                                      'away_days_rest',
-    ## features for individual players
-    ## 7 offensive players, ranked by minutes
-                                      'away_p0_off',
-                                      'away_p1_off',
-                                      'away_p2_off',
-                                      'away_p3_off',
-                                      'away_p4_off',
-                                      'away_p5_off',
-                                      'away_p6_off',
-    ## 7 defensive players, ranked by minutes
-                                      'away_p0_def',
-                                      'away_p1_def',
-                                      'away_p2_def',
-                                      'away_p3_def',
-                                      'away_p4_def',
-                                      'away_p5_def',
-                                      'away_p6_def',]
 
     # off_player_file = os.path.join('season_data', str(season.season), 'player_offense_features.csv')
     # def_player_file = os.path.join('season_data', str(season.season), 'player_defense_features.csv')

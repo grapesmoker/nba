@@ -16,4 +16,4 @@ boxscores = db.boxscores
 players = db.players
 teams = db.teams
 pbp = db.pbp
-
+odds = db.odds

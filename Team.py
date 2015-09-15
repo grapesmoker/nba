@@ -19,7 +19,6 @@ class TeamDataError(Exception):
         return self.msg
 
 
-
 class Team:
 
     _coll = teams

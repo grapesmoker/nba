@@ -5,12 +5,17 @@ import requests
 import json
 import os
 import datetime as dt
+import pandas as pd
 
 from bs4 import BeautifulSoup
 
-from settings import si_base, teams, players, pbp
+from settings import si_base, teams, players, pbp, odds
 from utils import format_date
 from dateutil import parser as date_parser
+
+import Team
+import Game
+
 
 def get_games(date, output_file=None):
 
@@ -115,3 +120,90 @@ def get_all_data(start_date, end_date):
 
             except Exception as ex:
                 print ex
+
+
+def get_odds_from_donbest(start_date, end_date):
+
+    dates = pd.date_range(start_date, end_date)
+    base = 'http://www.donbest.com/nba/odds/'
+    str_format = '%Y%m%d'
+
+    odds_results = pd.DataFrame(index=dates, columns=['game_id', 'home_team', 'away_team', 'home_line'])
+
+    for i, date in enumerate(dates):
+
+        print 'getting results for', date
+
+        target = base + date.strftime(str_format) + '.html'
+        res = requests.get(target)
+        soup = BeautifulSoup(res.text)
+
+        rows = soup.select('.statistics_table_row') + \
+               soup.select('.statistics_table_alternateRow')
+
+        for row in rows:
+
+            try:
+                team_data = extract_row_info(row)
+
+                home_team = team_data[0][1]
+                away_team = team_data[1][1]
+                home_line = team_data[0][0]
+
+                game = Game.Game.look_up_game(date, home_team)
+
+                odds_results.iloc[i]['game_id'] = game.id
+                odds_results.iloc[i]['home_team'] = home_team.id
+                odds_results.iloc[i]['away_team'] = away_team.id
+                odds_results.iloc[i]['home_line'] = home_line
+            except Exception as ex:
+                print 'Something went wrong extracting odds on {}'.format(date)
+
+    odds_results.index.name = 'game_date'
+
+    return odds_results
+
+
+def extract_row_info(row):
+
+    matcher = '-?[\d]+\.[\d]+'
+
+    def to_number(x):
+        if x == 'PK':
+            return 0.0
+        else:
+            try:
+                val = float(x)
+            except ValueError as ex:
+                print ex
+                val = 0.0
+            return val
+
+    odds = row.select('.oddsOpener div')[0]
+    odds_nums = [c.string for c in odds.children if c.string is not None]
+    odds_nums = map(to_number, odds_nums)
+
+    team_elems = row.select('nobr span')
+    team_names = [team.text for team in team_elems]
+
+    home_team_nick = team_names[1].split()[-1]
+    away_team_nick = team_names[0].split()[-1]
+
+    home_team_nick = home_team_nick.replace('Bobcats', 'Hornets')
+    away_team_nick = away_team_nick.replace('Bobcats', 'Hornets')
+    home_team_nick = home_team_nick.replace('Trailblazers', 'Trail Blazers')
+    away_team_nick = away_team_nick.replace('Trailblazers', 'Trail Blazers')
+
+    print home_team_nick, 'vs', away_team_nick
+
+    home_id = teams.find_one({'nickname': home_team_nick})['id']
+    away_id = teams.find_one({'nickname': away_team_nick})['id']
+
+    home_team = Team.Team(home_id)
+    away_team = Team.Team(away_id)
+
+    if odds_nums[0] < 100:
+        return [(odds_nums[0] * -1, home_team), (odds_nums[0], away_team)]
+    elif odds_nums[1] < 100:
+        return [(odds_nums[1], home_team), (odds_nums[1] * -1, away_team)]
+

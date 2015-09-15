@@ -19,9 +19,10 @@ from Season import Season
 from Player import Player
 from Game import Game
 
-from settings import pbp, players
+from settings import pbp, players, odds
 from analysis.features import construct_global_features, construct_all_features
 from analysis.prediction import predict_game_outcome, predict_game_day, predict_all_games
+from network import get_odds_from_donbest
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -179,10 +180,10 @@ if __name__ == '__main__':
     parser.add_argument('-if', '--input_file', dest='input_file', nargs='*')
     parser.add_argument('-of', '--output_file', dest='output_file')
     parser.add_argument('--game-date', dest='game_date')
-    parser.add_argument('--start-date', dest='start_date')
-    parser.add_argument('--end-date', dest='end_date')
+    parser.add_argument('--start-date', dest='start_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
+    parser.add_argument('--end-date', dest='end_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
     parser.add_argument('--season', dest='season', type=int)
-    parser.add_argument('--method', dest='method', default='LogReg')
+    parser.add_argument('--method', dest='method', default='LogReg', nargs='*')
     parser.add_argument('--window', dest='window', type=int, default=20)
     
     args = parser.parse_args()
@@ -294,27 +295,39 @@ if __name__ == '__main__':
 
         season = Season(args.season)
 
-        results = predict_all_games(season, args.window)
-        game_ids = [res[0].id for res in results]
+        for method in args.method:
 
-        data = pd.DataFrame(columns=['game_id', 'home_team', 'away_team',
-                                     'predicted_margin', 'actual_margin'],
-                            index=game_ids)
+            print('Generating predictions using {}'.format(method))
+            results = predict_all_games(season, args.window, method=method)
+            game_ids = [res[0].id for res in results]
 
-        for i, result in enumerate(results):
+            data = pd.DataFrame(columns=['home_team', 'away_team',
+                                         'predicted_margin', 'actual_margin'],
+                                index=game_ids)
+            data.index.name = 'game_id'
 
-            game = result[0]
-            pred_score = result[1]
-            # row = {'game_id': game.id, 'predicted_margin': pred_score[0], 'actual_margin': }
-            data.iloc[i]['game_id'] = game.id
-            data.iloc[i]['home_team'] = game.home_team.id
-            data.iloc[i]['away_team'] = game.away_team.id
-            data.iloc[i]['predicted_margin'] = pred_score[0]
-            data.iloc[i]['actual_margin'] = game.home_points - game.away_points
+            #for method in ['LogReg', 'Lasso', 'Ridge', 'BayesRidge']
 
-        data.to_csv('predictions/{0}/predictions_{1}.csv'.format(season.season, method))
+            for i, result in enumerate(results):
 
+                game = result[0]
+                pred_score = result[1]
+                # row = {'game_id': game.id, 'predicted_margin': pred_score[0], 'actual_margin': }
+                #data.iloc[i]['game_id'] = game.id
+                data.iloc[i]['home_team'] = game.home_team.id
+                data.iloc[i]['away_team'] = game.away_team.id
+                data.iloc[i]['predicted_margin'] = pred_score[0]
+                data.iloc[i]['actual_margin'] = game.home_points - game.away_points
 
+            data.to_csv('predictions/{0}/predictions_{1}.csv'.format(season.season, method))
+
+    if args.operation == 'get-odds' and args.start_date and args.end_date and args.season:
+
+        #print(args.start_date, args.end_date)
+        game_odds = get_odds_from_donbest(args.start_date, args.end_date)
+        game_odds.to_csv('odds/{}/odds-from-{}-to-{}.csv'.format(args.season,
+                                                                 args.start_date.strftime('%Y-%m-%d'),
+                                                                 args.end_date.strftime('%Y-%m-%d')))
 
     if args.operation == 'scrape_data':
         season_start_date = dt.datetime(2013, 10, 29)
