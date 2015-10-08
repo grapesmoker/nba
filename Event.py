@@ -208,6 +208,22 @@ class Event:
         return self.play_type_id == self.__class__._event_ids['Timeout']
 
     @property
+    def is_jump_ball(self):
+        return self.play_type_id == self.__class__._event_ids['Jump Ball']
+
+    @property
+    def is_start_period(self):
+        return self.play_type_id == self.__class__._event_ids['Start Period']
+
+    def reset_clock(self, current_shot_clock):
+        if self.is_dreb or self.is_field_goal_made or self.is_oreb or self.is_turnover:
+            return 24.0
+        elif self.is_foul and current_shot_clock < 14.0 and self.play_time < dt.timedelta(minutes=11, seconds=46):
+            return 14.0
+        else:
+            return
+
+    @property
     def is_three_pointer(self):
         x, y = self.shot_coordinates
         if euclidean((x, y), (0, 5.25)) > 23.75:

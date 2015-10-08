@@ -92,99 +92,20 @@ def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):
     return categories, cluster_obj
 
 
-def compute_player_clusters(data, clusters=10, method='GMM', plot=False):
+def compute_player_clusters(data, clusters=10, method='Affinity'):
+    # expects a pandas DataFrame
+    features = data.values
+    scaled_features = StandardScaler().fit_transform(features)
 
-    if isinstance(data, str):
-        data = pd.read_csv(data, delimiter=',', index_col=0)
-        data = data[data.mp_pct > 0]
-    elif isinstance(data, pd.DataFrame):
-        data = data
-    else:
-        raise TypeError('Incorrect type!')
-
-    scaled_features = StandardScaler().fit_transform(data)
-
-    #print scaled_features
-
-    #sims = euclidea_ndistances(non_empty_features)
-    #print sims
-
-    print 'Calculating player similarity matrix'
-
-    if method != 'GMM':
-        sims = player_feature_sim_matrix(data)
-    else:
-        sims = []
-
-    cluster_obj = None
+    cluster_obj = select_cluster_obj(method, clusters)
+    cluster_obj.fit(scaled_features)
 
     print 'Clustering using {}'.format(method)
 
-    if method == 'Affinity':
-
-        sims *= -1
-        #af = AffinityPropagation(preference=-2000).fit(non_empty_features)
-        af = AffinityPropagation(preference=-2000, affinity='precomputed').fit(sims)
-        labels = af.labels_
-        cluster_obj = af
-
-    if method == 'KMeans':
-
-        km = KMeans(n_clusters=clusters).fit(scaled_features)
-        labels = km.labels_
-        cluster_obj = km
-
-    if method == 'DBSCAN':
-
-        sims = 1 - (sims / np.max(sims))
-        db = DBSCAN(eps=0.75).fit(sims)
-        labels = db.labels_
-        cluster_obj = db
-
-    if method == 'Ward':
-
-        ward = Ward(n_clusters=clusters).fit(sims)
-        labels = ward.labels_
-        cluster_obj = ward
-
     if method == 'GMM':
-
-        gmm = GMM(n_components=clusters).fit(scaled_features)
-        weights = gmm.weights_
-        means = gmm.means_
-        labels = gmm.predict(scaled_features)
-        cluster_obj = gmm
-
-        #print weights
-        #print means
-
-    #print labels
-
-    if plot:
-        norm = Normalize(min(labels), max(labels))
-        cm = mpl.cm.jet
-
-        mds = MDS(n_components=2)
-        res = mds.fit(scaled_features)
-
-        pos = res.embedding_
-        offset_radius = 10
-        cluster_thetas = np.linspace(0, 2 * np.pi, clusters + 1)[0:clusters]
-        cluster_vectors = [(offset_radius * np.cos(theta), offset_radius * np.sin(theta)) for theta in cluster_thetas]
-        player_names = [str(Player(player_id)) for player_id in data.index]
-
-        #player_names = [' '.join(look_up_player_name(player_id)) for player_id in non_empty_ids]
-
-        for i, coords in enumerate(pos):
-            label = labels[i]
-            player_id = data.index[i]
-            color = cm(norm(label))
-            offset = cluster_vectors[label]
-            mpl.plot(coords[0] + offset[0], coords[1] + offset[1], color=color, marker='o', label=player_names[i])
-
-        #datacursor(formatter='{label}'.format)
-
-        mpl.show()
+        labels = cluster_obj.predict(scaled_features)
+    else:
+        labels = cluster_obj.labels_
 
     categories = {}
 
@@ -198,6 +119,20 @@ def compute_player_clusters(data, clusters=10, method='GMM', plot=False):
     return categories, cluster_obj
 
 
+def select_cluster_obj(method, clusters=10):
+
+    if method == 'Affinity':
+        return AffinityPropagation(preference=-50)
+    elif method == 'KMeans':
+        return KMeans(n_clusters=clusters)
+    elif method == 'DBSCAN':
+        return DBSCAN(eps=0.75).fit()
+    elif method == 'GMM':
+        return GMM(n_components=clusters)
+    else:
+        return None
+
+
 def find_member_in_clusters(clusters, member):
 
     for label, players in clusters.iteritems():
@@ -206,7 +141,29 @@ def find_member_in_clusters(clusters, member):
     return None
 
 
+def plot_clusters(scaled_features, cluster_obj):
 
+    labels = cluster_obj.labels_
+    clusters = len(labels)
+
+    norm = Normalize(min(labels), max(labels))
+    cm = mpl.cm.jet
+
+    mds = MDS(n_components=2)
+    res = mds.fit(scaled_features)
+
+    pos = res.embedding_
+    offset_radius = 10
+    cluster_thetas = np.linspace(0, 2 * np.pi, clusters + 1)[0:clusters]
+    cluster_vectors = [(offset_radius * np.cos(theta), offset_radius * np.sin(theta)) for theta in cluster_thetas]
+
+    for i, coords in enumerate(pos):
+        label = labels[i]
+        color = cm(norm(label))
+        offset = cluster_vectors[label]
+        mpl.plot(coords[0] + offset[0], coords[1] + offset[1], color=color, marker='o')
+
+    mpl.show()
         
 
 def cluster_overlap(c1, c2):

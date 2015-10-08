@@ -70,7 +70,7 @@ class Game:
         self._home_boxscore = self._core_data['boxscores'][0]
         self._away_boxscore = self._core_data['boxscores'][1]
         self._pbp = self._core_data['pbp']
-        self._events = [Event(play_data) for play_data in self._pbp]
+        self._events = sorted([Event(play_data) for play_data in self._pbp])
 
         self._add_custom_fields()
         self._pre_cache_lineups()
@@ -599,6 +599,23 @@ class Game:
             all_plays += self.events_in_interval(interval)
 
         return sorted(all_plays, reverse=True)
+
+    def calc_events_shot_clock(self):
+
+        q_starts = [event for event in self.events if event.is_start_period]
+        q_indices = [self.events.index(q_start) for q_start in q_starts]
+
+        periods = [1, 2, 3, 4]
+
+        for q in periods:
+            plays = [event for event in self.events if event.period == q]
+            shot_clock = 24.0
+            for i, play in enumerate(plays):
+                if i > 0 and play.play_time > plays[i-1].play_time:
+                    t_diff = play.play_time - plays[i-1].play_time
+                    shot_clock_elapsed = t_diff.seconds
+                    shot_clock -= shot_clock_elapsed
+
 
     def __cmp__(self, other):
         if self.date == other.date:

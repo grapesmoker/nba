@@ -19,17 +19,18 @@ from sklearn.manifold import MDS
 from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
 
 from Player import Player
+from Game import Game
 from features import *
 from clustering import *
 
-features_to_use = [# 'home_eff_field_goal_pct',
-                   # 'home_def_reb_pct',
-                   # 'home_off_reb_pct',
-                   # 'home_off_tov_pct',
-                   # 'home_def_tov_pct',
-                   # 'home_free_throw_rate',
-                   'home_def_rtg',
-                   'home_off_rtg',
+features_to_use = ['home_eff_field_goal_pct',
+                   'home_def_reb_pct',
+                   'home_off_reb_pct',
+                   'home_off_tov_pct',
+                   'home_def_tov_pct',
+                   'home_free_throw_rate',
+                   #'home_def_rtg',
+                   #'home_off_rtg',
                    'home_days_rest',
                    # 'home_p0_off',
                    # 'home_p1_off',
@@ -45,14 +46,14 @@ features_to_use = [# 'home_eff_field_goal_pct',
                    # 'home_p4_def',
                    # 'home_p5_def',
                    # 'home_p6_def',
-                   # 'away_eff_field_goal_pct',
-                   # 'away_def_reb_pct',
-                   # 'away_off_reb_pct',
-                   # 'away_off_tov_pct',
-                   # 'away_def_tov_pct',
-                   # 'away_free_throw_rate',
-                   'away_def_rtg',
-                   'away_off_rtg',
+                   'away_eff_field_goal_pct',
+                   'away_def_reb_pct',
+                   'away_off_reb_pct',
+                   'away_off_tov_pct',
+                   'away_def_tov_pct',
+                   'away_free_throw_rate',
+                   #'away_def_rtg',
+                   #'away_off_rtg',
                    'away_days_rest',
                    # 'away_p0_off',
                    # 'away_p1_off',
@@ -102,7 +103,7 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
     elif method == 'BayesRidge':
         classifier = BayesianRidge()
     elif method == 'SVM':
-        classifier = SVC()
+        classifier = SVC(probability=True)
     elif method == 'RandForest':
         classifier = RandomForestClassifier()
     elif method == 'NaiveBayes':
@@ -120,13 +121,13 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
     game_features = game_features[features_to_use].values
     scaled_features = scaler.transform(game_features)
 
+    result = classifier.predict(scaled_features)[0]
+    probs = classifier.predict_proba(scaled_features)[0]
+    labels = classifier.classes_
 
-    result = classifier.predict(scaled_features)
-    # print classifier.classes_
-    # print classifier.score(scaled_data, plus_minus)
-    # print game.id, result
+    # return the classes and the probabilities
+    return {'classes': labels, 'probabilities': probs, 'prediction': result}
 
-    return result
 
 def predict_game_day(game_date, season, start_date=None, end_date=None, method='LogReg'):
 
@@ -210,11 +211,12 @@ def predict_all_games(season, window_size=20, method='LogReg'):
         #                             'features-from-{}-to-{}'.format(start_date.strftime(str_format),
         #                                                             end_date.strftime(str_format)))
 
-        features = stitch_gameday_features_from_files(season.start_date, game.date, season=season.season)
+        features = stitch_gameday_features_from_files(season.start_date, game.date, season=season.season, overlap=False)
 
         result = predict_game_outcome(features, game, season,
                                       start_date=start_date, end_date=end_date, method=method)
-        prediction_results.append((game, result))
+        result['game'] = game
+        prediction_results.append(result)
 
         # print game
         # if result[0] > 0:
@@ -232,11 +234,16 @@ def predict_all_games(season, window_size=20, method='LogReg'):
 
     return prediction_results
 
+
 def compare_to_odds(predictions, odds):
 
     wins = 0
     losses = 0
     ties = 0
+
+    index = predictions.game_id.values
+    results = pd.Series(index=index)
+    cover = pd.Series(index=index)
 
     for game_id in predictions.game_id:
 
@@ -247,36 +254,43 @@ def compare_to_odds(predictions, odds):
         #print odds_pred.empty
 
         if not odds_pred.empty:
-            line = odds_pred.home_line.values[0] * -1
-            pred_margin = my_pred.predicted_margin.values[0]
+            line = odds_pred.spread.values[0]
+            pred_margin = my_pred.prediction.values[0]
             margin = my_pred.actual_margin.values[0]
 
             game = Game(game_id)
 
-            if pred_margin - line > 0:
+            #print game_id, pred_margin, line
+
+            if pred_margin - line >= 0:
                 # I have picked home
+                cover[game_id] = 'H'
                 if game.home_points > game.away_points + line:
-                    status = 'win'
+                    status = 'W'
                     wins += 1
                 elif game.home_points == game.away_points + line:
-                    status = 'tie'
+                    status = 'T'
                     ties += 1
                 elif game.home_points < game.away_points + line:
-                    status = 'lose'
+                    status = 'L'
                     losses += 1
-            if pred_margin - line < 0:
+            elif pred_margin - line < 0:
                 # I have picked away
+                cover[game_id] = 'A'
                 if game.home_points < game.away_points + line:
-                    status = 'win'
+                    status = 'W'
                     wins += 1
                 elif game.home_points == game.away_points + line:
-                    status = 'tie'
+                    status = 'T'
                     ties += 1
                 elif game.home_points > game.away_points + line:
-                    status = 'lose'
+                    status = 'L'
                     losses += 1
+            #elif pred_margin - line == 0:
+
+            results[game_id] = status
 
 
             #print game, game_id
             #print 'line: {: 2.1f}'.format(line), 'predicted: {: 2.1f}'.format(pred_margin), 'actual: {: 2.1f}'.format(margin), status
-    return (wins, ties, losses)
+    return (wins, ties, losses, cover, results)

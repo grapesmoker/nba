@@ -713,3 +713,40 @@ def get_all_player_features(season, start_date=None, end_date=None, recompute=Fa
 
     return player_features
 
+
+def stitch_gameday_features_from_files(start_date, game_date, window_size=20, season=2013, overlap=False):
+
+    one_day = dt.timedelta(days=1)
+    window = dt.timedelta(days=window_size)
+    end_date = start_date + window
+
+    first_features_file = features_file_path(season, start_date, end_date)
+    all_features = pd.read_csv(first_features_file)
+    all_features = all_features[all_features.home_off_rtg > 0]
+    start_date = start_date + one_day
+    end_date = end_date + one_day
+
+    while end_date < game_date:
+
+        features_file = features_file_path(season, start_date, end_date)
+        features = pd.read_csv(features_file)
+        features = features[features.home_off_rtg > 0]
+
+        if not overlap:
+            existing_ids = all_features.game_id.values
+            selector = features.game_id.map(lambda x: x not in existing_ids)
+            features = features[selector]
+
+        all_features = pd.concat([all_features, features])
+
+        end_date += one_day
+        start_date += one_day
+
+    return all_features
+
+
+def features_file_path(season, start_date, end_date):
+
+    str_format = '%Y-%m-%d'
+    return 'season_data/{}/features-from-{}-to-{}'.format(season, start_date.strftime(str_format),
+                                                          end_date.strftime(str_format))

@@ -10,6 +10,7 @@ import os
 import re
 import dateutil.parser as dtparser
 import pandas as pd
+import csv
 
 import matplotlib.pyplot as mpl
 
@@ -294,29 +295,66 @@ if __name__ == '__main__':
     if args.operation == 'predict_season' and args.season:
 
         season = Season(args.season)
+        odds_file = 'odds/{}/odds-from-{}-to-{}.csv'.format(args.season,
+                                                            season.start_date.strftime('%Y-%m-%d'),
+                                                            season.end_date.strftime('%Y-%m-%d'))
+        odds_data = pd.read_csv(odds_file)
 
         for method in args.method:
 
             print('Generating predictions using {}'.format(method))
             results = predict_all_games(season, args.window, method=method)
-            game_ids = [res[0].id for res in results]
 
-            data = pd.DataFrame(columns=['home_team', 'away_team',
-                                         'predicted_margin', 'actual_margin'],
+            game_ids = [res['game'].id for res in results]
+
+            data = pd.DataFrame(columns=['game_date',
+                                         'home_team',
+                                         'away_team',
+                                         'spread',
+                                         'prediction',
+                                         'prob_home_cover',
+                                         'prob_away_cover',
+                                         'prob_tie',
+                                         'actual_margin'],
                                 index=game_ids)
             data.index.name = 'game_id'
 
-            #for method in ['LogReg', 'Lasso', 'Ridge', 'BayesRidge']
+            # import pdb; pdb.set_trace();
 
             for i, result in enumerate(results):
 
-                game = result[0]
-                pred_score = result[1]
-                # row = {'game_id': game.id, 'predicted_margin': pred_score[0], 'actual_margin': }
-                #data.iloc[i]['game_id'] = game.id
+                game = result['game']
+                scores = result['classes']
+                score_distribution = result['probabilities']
+                prediction = result['prediction']
+
+                odds_for_game = odds_data[odds_data.game_id == game.id]
+                spread = odds_for_game.spread.values[0]
+
+                prob_home_cover = 0
+                prob_away_cover = 0
+                prob_tie = 0
+
+                probs_file = os.path.join('predictions', str(season.season), 'probabilities', str(game.id))
+                writer = csv.writer(open(probs_file, 'w'))
+
+                for score, prob in zip(scores, score_distribution):
+                    if score < spread:
+                        prob_away_cover += prob
+                    elif score > spread:
+                        prob_home_cover += prob
+                    elif score == spread:
+                        prob_tie += prob
+                    writer.writerow([score, prob])
+
+                data.iloc[i]['game_date'] = game.date.strftime('%Y-%m-%d')
                 data.iloc[i]['home_team'] = game.home_team.id
                 data.iloc[i]['away_team'] = game.away_team.id
-                data.iloc[i]['predicted_margin'] = pred_score[0]
+                data.iloc[i]['spread'] = spread
+                data.iloc[i]['prediction'] = prediction
+                data.iloc[i]['prob_home_cover'] = prob_home_cover
+                data.iloc[i]['prob_away_cover'] = prob_away_cover
+                data.iloc[i]['prob_tie'] = prob_tie
                 data.iloc[i]['actual_margin'] = game.home_points - game.away_points
 
             data.to_csv('predictions/{0}/predictions_{1}.csv'.format(season.season, method))
