@@ -21,7 +21,6 @@ def get_games(date, output_file=None):
 
     # games_url = base + '/scoreboard/' + format_date(date) + '/games.json'
     games_url = si_base + 'schedule'
-    #print format_date(date)
 
     result = requests.get(games_url, params={'date': format_date(date)})
 
@@ -32,7 +31,6 @@ def get_games(date, output_file=None):
     #date_string = date.strftime('%B %d,%Y')
 
     games = soup.find_all('tr', 'component-scoreboard-list final')
-
     game_ids = []
 
     for game in games:
@@ -50,28 +48,27 @@ def get_games(date, output_file=None):
 
     return game_ids
 
-def get_all_data(start_date, end_date):
 
-    try:
-        os.mkdir('./json_data')
-    except OSError as os_err:
-        print os_err
+def get_all_data(start_date, end_date, season, ignore_dates=[]):
 
-    try:
-        os.mkdir('./mongo_data')
-    except OSError as os_err:
-        print os_err
+    data_dir = os.path.join(os.path.abspath('.'), 'json_data', str(season))
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+
+    mongo_dir = os.path.join(os.path.abspath('.'), 'mongo_data', str(season))
+    if not os.path.exists(mongo_dir):
+        os.mkdir(mongo_dir)
 
     date_list = [start_date + dt.timedelta(days=x) for x in range(0, (end_date - start_date).days)]
-    if dt.date(2014, 2, 16) in date_list:
-        date_list.remove(dt.date(2014, 2, 16))
-    if dt.date(2015, 2, 15) in date_list:
-        date_list.remove(dt.date(2015, 2, 15))
+
+    for ignore_date in ignore_dates:
+        if ignore_date in date_list:
+            date_list.remove(ignore_date)
 
     for game_day in date_list:
         print 'Processing game day', game_day
 
-        game_ids = get_games(game_day, 'json_data/2013/game-day-{0}.json'.format(format_date(game_day)))
+        game_ids = get_games(game_day, 'json_data/{}/game-day-{}.json'.format(season, format_date(game_day)))
 
         # now all the data is just contained in the boxscore...
 
@@ -91,8 +88,7 @@ def get_all_data(start_date, end_date):
                 json_result = result.json()['apiResults'][0]
                 #dict_result = json.loads(json_result)['apiResults']
                 #print json_result
-                print game_id
-                output_file = 'json_data/2013/pbp_{0}_{1}.json'.format(format_date(game_day), game_id)
+                output_file = 'json_data/{}/pbp_{}_{}.json'.format(season, format_date(game_day), game_id)
                 with open(output_file, 'w') as of:
                     json.dump(json_result, of, indent=4)
 

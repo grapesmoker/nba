@@ -322,13 +322,6 @@ def construct_global_features(season, team=None, start_date=None, end_date=None,
         data = pd.read_csv(output_file, index_col=0)
         return data
 
-    # off_player_file = os.path.join('season_data', str(season.season), 'player_offense_features.csv')
-    # def_player_file = os.path.join('season_data', str(season.season), 'player_defense_features.csv')
-
-    # off_player_data = pd.read_csv(off_player_file, delimiter=',', index_col=0)
-    # def_player_data = pd.read_csv(def_player_file, delimiter=',', index_col=0)
-
-
     # print 'Extracting all player features...'
     # player_features = get_all_player_features(season, start_date, end_date)
     # player_features = player_features[player_features.mp_pct > 0]
@@ -340,9 +333,6 @@ def construct_global_features(season, team=None, start_date=None, end_date=None,
     # player_oclusters, off_model = compute_player_clusters(player_ofeatures, clusters=7, method='KMeans')
     # print 'Clustering defense...'
     # player_dclusters, def_model = compute_player_clusters(player_dfeatures, clusters=7, method='KMeans')
-    #
-    # o_cluster_labels = player_oclusters.keys()
-    # d_cluster_labels = player_dclusters.keys()
 
     one_day = dt.timedelta(days=1)
 

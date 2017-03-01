@@ -23,7 +23,7 @@ from Game import Game
 from settings import pbp, players, odds
 from analysis.features import construct_global_features, construct_all_features
 from analysis.prediction import predict_game_outcome, predict_game_day, predict_all_games
-from network import get_odds_from_donbest
+from network import get_odds_from_donbest, get_all_data
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -181,8 +181,9 @@ if __name__ == '__main__':
     parser.add_argument('-if', '--input_file', dest='input_file', nargs='*')
     parser.add_argument('-of', '--output_file', dest='output_file')
     parser.add_argument('--game-date', dest='game_date')
-    parser.add_argument('--start-date', dest='start_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
-    parser.add_argument('--end-date', dest='end_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
+    parser.add_argument('--start-date', dest='start_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d').date())
+    parser.add_argument('--end-date', dest='end_date', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d').date())
+    parser.add_argument('--ignore-dates', dest='ignore_dates', type=lambda x: dt.datetime.strptime(x, '%Y-%m-%d').date(), nargs='*')
     parser.add_argument('--season', dest='season', type=int)
     parser.add_argument('--method', dest='method', default='LogReg', nargs='*')
     parser.add_argument('--window', dest='window', type=int, default=20)
@@ -367,11 +368,9 @@ if __name__ == '__main__':
                                                                  args.start_date.strftime('%Y-%m-%d'),
                                                                  args.end_date.strftime('%Y-%m-%d')))
 
-    if args.operation == 'scrape_data':
-        season_start_date = dt.datetime(2013, 10, 29)
-        season_end_date = dt.datetime(2014, 04, 17)
-    
-        get_all_data(season_start_date, season_end_date)
+    if args.operation == 'scrape_data' and args.start_date and args.end_date and args.ignore_dates and args.season:
+
+        get_all_data(args.start_date, args.end_date, args.season, args.ignore_dates)
 
     if args.operation == 'plot_player_shots':
 

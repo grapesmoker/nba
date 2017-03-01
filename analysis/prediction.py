@@ -119,7 +119,10 @@ def predict_game_outcome(data_source, game, season, start_date=None, end_date=No
     game_features = construct_global_features(season, team=home_team,
                                               start_date=start_date, end_date=end_date, game_date=game.date)
     game_features = game_features[features_to_use].values
-    scaled_features = scaler.transform(game_features)
+    if method != 'RandForest':
+        scaled_features = scaler.transform(game_features)
+    else:
+        scaled_features = game_features
 
     result = classifier.predict(scaled_features)[0]
     probs = classifier.predict_proba(scaled_features)[0]
