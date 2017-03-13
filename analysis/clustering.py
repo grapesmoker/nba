@@ -1,5 +1,3 @@
-__author__ = 'jerry'
-
 import numpy as np
 import matplotlib.pyplot as mpl
 import pandas as pd
@@ -13,7 +11,7 @@ from sklearn.manifold import MDS
 
 from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
 
-from Player import Player
+from game.Player import Player
 
 
 def compute_team_clusters(data_file, clusters=5, method='GMM', plot=False):

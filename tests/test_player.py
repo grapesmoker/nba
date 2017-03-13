@@ -2,10 +2,11 @@ __author__ = 'jerry'
 
 from unittest import TestCase
 
-import Player
-import Game
+from game import Player
+from game import Game
 
-from utils import compute_ts_length
+from utils.misc import compute_ts_length
+
 
 class TestPlayer(TestCase):
 

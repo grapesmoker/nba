@@ -1,29 +1,28 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
 
-import datetime as dt
 import argparse
+import csv
+import datetime as dt
 import json
-import pymongo
-import sys
 import os
 import re
+import sys
+
 import dateutil.parser as dtparser
 import pandas as pd
-import csv
-
-import matplotlib.pyplot as mpl
-
+import pymongo
 from tqdm import tqdm
-from utils import compute_ts_length
-from Season import Season
-from Player import Player
-from Game import Game
+from termcolor import colored
 
-from settings import pbp, players, odds
 from analysis.features import construct_global_features, construct_all_features
 from analysis.prediction import predict_game_outcome, predict_game_day, predict_all_games
-from network import get_odds_from_donbest, get_all_data
+from game.Game import Game
+from game.Player import Player
+from game.Season import Season
+from utils.network import get_odds_from_donbest, get_all_data
+from utils.settings import pbp, players, seasons
+from utils.misc import compute_ts_length
 
 team_to_espn_ids = {'Hawks': 1,
                     'Celtics': 2,
@@ -55,6 +54,7 @@ team_to_espn_ids = {'Hawks': 1,
                     'Raptors': 50,
                     'Grizzlies': 51,
                     'Bobcats': 74}
+
 
 def compute_all_season_lineups(year):
 
@@ -105,6 +105,43 @@ def import_pbp_files(files):
         import_pbp(pbp_file)
 
 
+def initialize_seasons():
+
+    seasons.update({'season': 2013},
+                   {'season': 2013,
+                    'start': dt.datetime(year=2013, month=10, day=29),
+                    'end': dt.datetime(year=2014, month=4, day=17),
+                    'allStarGame': dt.datetime(year=2014, month=2, day=16)}, upsert=True)
+
+    seasons.update({'season': 2014},
+                   {'season': 2014,
+                    'start': dt.datetime(year=2014, month=10, day=28),
+                    'end': dt.datetime(year=2015, month=4, day=16),
+                    'allStarGame': dt.datetime(year=2015, month=2, day=15)}, upsert=True)
+
+    seasons.update({'season': 2015},
+                   {'season': 2015,
+                    'start': dt.datetime(year=2015, month=10, day=27),
+                    'end': dt.datetime(year=2016, month=4, day=14),
+                    'allStarGame': dt.datetime(year=2016, month=2, day=14)}, upsert=True)
+
+    seasons.update({'season': 2016},
+                   {'season': 2016,
+                    'start': dt.datetime(year=2016, month=10, day=25),
+                    'end': dt.datetime(year=2017, month=4, day=15),
+                    'allStarGame': dt.datetime(year=2017, month=2, day=19)}, upsert=True)
+
+
+def update_game_times():
+
+    games = pbp.find({})
+    for game in games:
+        game_obj = Game(game['id'])
+        game['game_date'] = game_obj.date
+        # print('updating game {} on {}'.format(game_obj.id, game_obj.date))
+        pbp.update({'id': game_obj.id}, game)
+
+
 def calc_all_player_times(year, recompute=False):
 
     class TimeComputationError(Exception):
@@ -114,7 +151,7 @@ def calc_all_player_times(year, recompute=False):
         def __str__(self):
             return self.msg
 
-    all_players = players.find({}).sort('id', pymongo.ASCENDING)
+    all_players = players.find({}, no_cursor_timeout=True).sort('id', pymongo.ASCENDING)
 
     print('Loading the {}-{} NBA season'.format(year, year + 1))
     season = Season(year)
@@ -126,7 +163,7 @@ def calc_all_player_times(year, recompute=False):
         games_played = season.get_player_games_in_range(player)
         for game in games_played:
             print('Calculating time on court for {} ({}) in {} ({})'.format(player, player.id, game, game.id))
-            boxscore_minutes = game.player_boxscore(player)['totalSecondsPlayed'] / 60.0
+            boxscore_minutes = game.player_boxscore(player)['total_seconds_played'] / 60.0
             if boxscore_minutes > 0:
                 time_on_court = player.time_on_court(game, recompute=recompute)
                 computed_minutes = compute_ts_length(time_on_court, unit='minutes')
@@ -142,7 +179,33 @@ def calc_all_player_times(year, recompute=False):
 
             else:
                 print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
+        del player
+        del games_played
 
+
+def fix_broken_times_json(err_file):
+
+    data = json.load(open(err_file, 'r'))
+
+    fixes = data['fixes']
+
+    for fix in fixes:
+        game_id = fix['game_id']
+        game = Game(game_id)
+        player_id = fix['player_id']
+        player = Player(player_id)
+        time_data = [(dt.timedelta(seconds=t['start']), dt.timedelta(seconds=t['end'])) for t in fix['times']]
+        print('Updating playing time for {} ({}) in {} ({})'.format(player, player.id, game, game.id))
+        player.save_timestream(game, time_data)
+        #print(compute_ts_length(time_data, unit='minutes'))
+        boxscore_minutes = game.player_boxscore(player)['total_seconds_played'] / 60.0
+        computed_minutes = compute_ts_length(player.time_on_court(game, recompute=False), unit='minutes')
+
+        if not abs(computed_minutes - boxscore_minutes) <= 0.5:
+            err = colored('Discrepancy between computed time: {0: 2.2f} and boxscore time: {1:2.2f}'.format(computed_minutes, boxscore_minutes), 'red')
+            print(err)
+        else:
+            print('{} played {} minutes in {}'.format(player, round(computed_minutes, 3), game))
 
 def fix_broken_times(err_file):
 
@@ -190,21 +253,29 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    if args.operation == 'compute_timelines':
+    if args.operation == 'init_seasons':
 
-        compute_all_season_lineups(2013)
+        initialize_seasons()
+
+    if args.operation == 'update_game_times':
+
+        update_game_times()
+
+    if args.operation == 'compute_timelines' and args.season:
+
+        compute_all_season_lineups(args.season)
 
     if args.operation == 'import_pbp' and args.input_file:
 
         import_pbp_files(args.input_file)
 
-    if args.operation == 'compute_player_times':
+    if args.operation == 'compute_player_times' and args.season:
 
-        calc_all_player_times(2013)
+        calc_all_player_times(args.season)
 
     if args.operation == 'fix_broken_times' and args.input_file:
 
-        fix_broken_times(args.input_file[0])
+        fix_broken_times_json(args.input_file[0])
 
     if args.operation == 'construct_global_features' and args.season:
 

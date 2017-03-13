@@ -3,18 +3,14 @@ from __future__ import division
 __author__ = 'jerry'
 
 import datetime as dt
-import numpy as np
 import pymongo
 import pandas as pd
 import os
 
-from pprint import pprint
-
-from Boxscore import PlayerBoxscore, TeamBoxscore
-from Player import Player
-from settings import players
+from game.Boxscore import PlayerBoxscore, TeamBoxscore
+from game.Player import Player
+from utils.settings import players
 from clustering import compute_player_clusters, find_member_in_clusters
-from tqdm import *
 
 output_headers =                 ['home_points',
                                       'home_eff_field_goal_pct',

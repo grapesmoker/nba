@@ -1,45 +1,40 @@
 __author__ = 'jerry'
 
-
-import requests
+import datetime as dt
 import json
 import os
-import datetime as dt
+
 import pandas as pd
-
+import requests
 from bs4 import BeautifulSoup
-
-from settings import si_base, teams, players, pbp, odds
-from utils import format_date
 from dateutil import parser as date_parser
 
-import Team
-import Game
+from utils.settings import si_base, teams, players, pbp
+from utils.misc import format_date
 
 
 def get_games(date, output_file=None):
 
     # games_url = base + '/scoreboard/' + format_date(date) + '/games.json'
-    games_url = si_base + 'schedule'
+    games_url = si_base + 'scoreboard/'
 
     result = requests.get(games_url, params={'date': format_date(date)})
-
-    #print games_url + format_date(date)
 
     soup = BeautifulSoup(result.text)
 
     #date_string = date.strftime('%B %d,%Y')
 
-    games = soup.find_all('tr', 'component-scoreboard-list final')
+    games = soup.select('div.component.game')
     game_ids = []
 
     for game in games:
-        game_date_elem = game.find('div', 'game-anchor')
-        game_date_text = game_date_elem['id']
-        game_date = date_parser.parse(game_date_text).date()
-        if game_date == date:
-            game_id = int(game['data-id'])
-            game_ids.append(game_id)
+        game_ids.append(game['data-gameid'])
+        #game_date_elem = game.find('div', 'game-anchor')
+        # game_date_text = game['id']
+        # game_date = date_parser.parse(game_date_text).date()
+        # if game_date == date:
+        #     game_id = int(game['data-id'])
+        #     game_ids.append(game_id)
 
     if output_file is not None:
         of = open(output_file, 'w')
@@ -72,47 +67,45 @@ def get_all_data(start_date, end_date, season, ignore_dates=[]):
 
         # now all the data is just contained in the boxscore...
 
-        base_url = 'http://www.si.com/pbp/liveupdate'
+        base_url = 'http://www.si.com/private/stats-proxy/v1/nba/game_detail'
 
         for game_id in game_ids:
 
 
-            result = requests.get(base_url, params={'json': '1',
-                                                    'sport': 'basketball/nba',
-                                                    'id': str(game_id),
-                                                    'box': 'true',
-                                                    'pbp': 'true',
-                                                    'linescore': 'true'})
+            result = requests.get(base_url, params={'id': str(game_id),
+                                                    'league': 'nba',
+                                                    'box_score': 'true',
+                                                    'play_by_play': 'true'})
+
 
             try:
-                json_result = result.json()['apiResults'][0]
+                json_result = result.json()['data']
                 #dict_result = json.loads(json_result)['apiResults']
                 #print json_result
                 output_file = 'json_data/{}/pbp_{}_{}.json'.format(season, format_date(game_day), game_id)
                 with open(output_file, 'w') as of:
                     json.dump(json_result, of, indent=4)
 
-                boxscore_data = json_result['league']['season']['eventType'][0]['events'][0]['boxscores']
-                team_data = json_result['league']['season']['eventType'][0]['events'][0]['teams']
+                boxscore_data = json_result['box_scores']
+                team_data = json_result['teams']
 
                 for team in team_data:
-                    filtered_team_data = {'id': team['teamId'],
-                                          'location': team['location'],
-                                          'nickname': team['nickname'],
+                    filtered_team_data = {'id': team['id'],
+                                          'location': team['location']['name'],
+                                          'nickname': team['title'],
                                           'abbreviation': team['abbreviation']}
                     print filtered_team_data['nickname']
-                    teams.update({'id': team['teamId']}, filtered_team_data, upsert=True)
+                    teams.update({'id': team['id']}, filtered_team_data, upsert=True)
 
                 for team in boxscore_data:
                     for player in team['playerstats']:
-                        filtered_player_data = {'id': player['player']['playerId'],
-                                                'firstName': player['player']['firstName'],
-                                                'lastName': player['player']['lastName']}
+                        filtered_player_data = {'id': player['player']['id'],
+                                                'firstName': player['player']['name']['first'],
+                                                'lastName': player['player']['name']['last']}
+                        players.update({'id': player['player']['id']}, filtered_player_data, upsert=True)
 
-                        players.update({'id': player['player']['playerId']}, filtered_player_data, upsert=True)
-
-
-                pbp.update({'league.season.eventType.0.events.0.eventId': game_id}, json_result, upsert=True)
+                json_result['game_date'] = game_day
+                pbp.update({'id': int(game_id)}, json_result, upsert=True)
 
             except Exception as ex:
                 print ex

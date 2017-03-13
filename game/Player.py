@@ -1,13 +1,13 @@
 from __future__ import division
 
 import datetime as dt
+
 import numpy as np
 
-from settings import players
-from utils import compute_ts_length
-
-from drawing.player_shot_charts import create_shot_chart
 from Boxscore import PlayerBoxscore
+from drawing.player_shot_charts import create_shot_chart
+from utils.misc import compute_ts_length
+from utils.settings import players
 
 class Player:
 
@@ -26,7 +26,7 @@ class Player:
         except Exception as ex:
             self._id = None
             self._first_name = None
-            self.last_name = None
+            self._last_name = None
 
     def _add_custom_fields(self):
 
@@ -370,11 +370,11 @@ class Player:
         team_drtg = team.drtg(game)
 
         opp_orb = opp_stats['rebounds']['offensive']
-        opp_fga = opp_stats['fieldGoals']['attempted']
-        opp_fgm = opp_stats['fieldGoals']['made']
+        opp_fga = opp_stats['field_goals']['attempted']
+        opp_fgm = opp_stats['field_goals']['made']
         opp_tov = opp_stats['turnovers']['total']
-        opp_ftm = opp_stats['freeThrows']['made']
-        opp_fta = opp_stats['freeThrows']['attempted']
+        opp_ftm = opp_stats['free_throws']['made']
+        opp_fta = opp_stats['free_throws']['attempted']
         opp_mp = opp_stats['minutes']
         opp_pts = opp_stats['points']
 
@@ -403,29 +403,29 @@ class Player:
         team = game.player_team(self)
         opp = game.opponent(team)
 
-        team_stats = team.stats(game)['teamStats']
-        opp_stats = opp.stats(game)['teamStats']
+        team_stats = team.stats(game)['team_stats']
+        opp_stats = opp.stats(game)['team_stats']
 
         ast = box_score['assists']
-        fgm = box_score['fieldGoals']['made']
-        fga = box_score['fieldGoals']['attempted']
-        ftm = box_score['freeThrows']['made']
-        fta = box_score['freeThrows']['attempted']
+        fgm = box_score['field_goals']['made']
+        fga = box_score['field_goals']['attempted']
+        ftm = box_score['free_throws']['made']
+        fta = box_score['free_throws']['attempted']
         tov = box_score['turnovers']
-        threes = box_score['threePointFieldGoals']['made']
+        threes = box_score['three_point_field_goals']['made']
         orb = box_score['rebounds']['offensive']
         pts = box_score['points']
-        mp = box_score['totalSecondsPlayed']/ 60.0
+        mp = box_score['total_seconds_played']/ 60.0
 
-        team_fgm = team_stats['fieldGoals']['made']
-        team_fga = team_stats['fieldGoals']['attempted']
+        team_fgm = team_stats['field_goals']['made']
+        team_fga = team_stats['field_goals']['attempted']
         team_ast = team_stats['assists']
         team_mp = team_stats['minutes']
-        team_ftm = team_stats['freeThrows']['made']
-        team_fta = team_stats['freeThrows']['attempted']
+        team_ftm = team_stats['free_throws']['made']
+        team_fta = team_stats['free_throws']['attempted']
         team_orb = team_stats['rebounds']['offensive']
         team_pts = team_stats['points']
-        team_3pm = team_stats['threePointFieldGoals']['made']
+        team_3pm = team_stats['three_point_field_goals']['made']
         team_tov = team_stats['turnovers']['total']
         opp_drb = opp_stats['rebounds']['defensive']
 
@@ -461,15 +461,15 @@ class Player:
 
         box_score = game.player_boxscore(self)
         team = game.player_team(self)
-        team_stats = team.stats(game)['teamStats']
+        team_stats = team.stats(game)['team_stats']
 
-        fga = box_score['fieldGoals']['attempted']
-        fta = box_score['freeThrows']['attempted']
+        fga = box_score['field_goals']['attempted']
+        fta = box_score['free_throws']['attempted']
         tov = box_score['turnovers']
-        mp = box_score['totalSecondsPlayed'] / 60.0
+        mp = box_score['total_seconds_played'] / 60.0
 
-        team_fga = team_stats['fieldGoals']['attempted']
-        team_fta = team_stats['freeThrows']['attempted']
+        team_fga = team_stats['field_goals']['attempted']
+        team_fta = team_stats['free_throws']['attempted']
         team_tov = team_stats['turnovers']['total']
         team_mp = team_stats['minutes']
 

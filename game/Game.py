@@ -1,18 +1,16 @@
 from __future__ import division
 
 import datetime as dt
-import numpy as np
-
-from settings import pbp
-
 from itertools import combinations
 
-from Team import Team
-from Player import Player
-from Event import Event
-from Boxscore import TeamBoxscore, PlayerBoxscore
+import numpy as np
 
-from utils import shared_times, recursive_intersect
+from game.Boxscore import TeamBoxscore
+from game.Event import Event
+from game.Player import Player
+from game.Team import Team
+from utils.misc import recursive_intersect, pretty_print_times
+from utils.settings import pbp
 
 from pprint import pprint
 
@@ -51,7 +49,7 @@ class Game:
 
     def get_by_event_id(self, event_id):
 
-        data = self._coll.find_one({'league.season.eventType.0.events.0.eventId': event_id})
+        data = self._coll.find_one({'id': event_id})
         self._data = data
         self.set_data(self._data)
 
@@ -59,17 +57,17 @@ class Game:
 
         # all the actual data is contained in here, so let's just throw away the outer
         # shells of the json
-        self._core_data = data['league']['season']['eventType'][0]['events'][0]
-        self._id = self._core_data['eventId']
-        self._game_type = data['league']['season']['eventType'][0]['name']
-        date_string = self._core_data['startDate'][0]['full'].split('T')[0]
+        self._core_data = data
+        self._id = self._core_data['id']
+        self._game_type = 'Regular Season'
+        date_string = self._core_data['start']['local'].split('T')[0]
         self._date = dt.datetime.strptime(date_string, '%Y-%m-%d')
         self._teams = self._core_data['teams']
         self._home_team = self._teams[0]
         self._away_team = self._teams[1]
-        self._home_boxscore = self._core_data['boxscores'][0]
-        self._away_boxscore = self._core_data['boxscores'][1]
-        self._pbp = self._core_data['pbp']
+        self._home_boxscore = self._core_data['box_scores'][0]
+        self._away_boxscore = self._core_data['box_scores'][1]
+        self._pbp = self._core_data['play_by_play']
         self._events = sorted([Event(play_data) for play_data in self._pbp])
 
         self._add_custom_fields()
@@ -78,13 +76,13 @@ class Game:
     def _add_custom_fields(self):
 
         id_str = 'league.season.eventType.0.events.0.eventId'
-        update_str = 'league.season.eventType.0.events.0.boxscores.'
+        update_str = 'league.season.eventType.0.events.0.box_scores.'
 
-        if 'lineups' not in self._core_data['boxscores'][0]:
-            self._coll.update_one({id_str: self._id}, {'$set': {update_str + '0.lineups': []}})
-            self._coll.update_one({id_str: self._id}, {'$set': {update_str + '1.lineups': []}})
-            self._core_data['boxscores'][0]['lineups'] = []
-            self._core_data['boxscores'][1]['lineups'] = []
+        if 'lineups' not in self._core_data['box_scores'][0]:
+            self._coll.update_one({'id': self._id}, {'$set': {'box_scores.0.lineups': []}})
+            self._coll.update_one({'id': self._id}, {'$set': {'box_scores.1.lineups': []}})
+            self._core_data['box_scores'][0]['lineups'] = []
+            self._core_data['box_scores'][1]['lineups'] = []
 
     def _pre_cache_lineups(self):
 
@@ -92,20 +90,20 @@ class Game:
         self._non_empty_lineups = {}
         self._empty_lineups = {}
 
-        self._non_empty_lineups[0] = [lineup for lineup in self._core_data['boxscores'][0]['lineups']
+        self._non_empty_lineups[0] = [lineup for lineup in self._core_data['box_scores'][0]['lineups']
                                       if lineup['times'] != []]
-        self._non_empty_lineups[1] = [lineup for lineup in self._core_data['boxscores'][1]['lineups']
+        self._non_empty_lineups[1] = [lineup for lineup in self._core_data['box_scores'][1]['lineups']
                                       if lineup['times'] != []]
 
-        self._empty_lineups[0] = [lineup for lineup in self._core_data['boxscores'][0]['lineups']
+        self._empty_lineups[0] = [lineup for lineup in self._core_data['box_scores'][0]['lineups']
                                   if lineup['times'] == []]
-        self._empty_lineups[1] = [lineup for lineup in self._core_data['boxscores'][1]['lineups']
+        self._empty_lineups[1] = [lineup for lineup in self._core_data['box_scores'][1]['lineups']
                                   if lineup['times'] == []]
 
     def __str__(self):
-        home_team_name = self._home_team['location'] + ' ' + self._home_team['nickname']
-        away_team_name = self._away_team['location'] + ' ' + self._away_team['nickname']
-        return '{0} vs {1} on {2!s}'.format(home_team_name, away_team_name, self.date.strftime('%Y-%m-%d'))
+        return '{0} vs {1} on {2!s}'.format(self.home_team,
+                                            self.away_team,
+                                            self.date.strftime('%Y-%m-%d'))
 
     def __repr__(self):
         return self.__str__()
@@ -124,21 +122,21 @@ class Game:
         
     @property
     def home_team(self):
-        return Team(self._home_team['teamId'])
+        return Team(self._home_team['id'])
         
     @property
     def away_team(self):
-        return Team(self._away_team['teamId'])
+        return Team(self._away_team['id'])
 
     @property
     def home_players(self):
-        home_player_ids = [player['player']['playerId'] for player in self._home_boxscore['playerstats']]
+        home_player_ids = [player['player']['id'] for player in self._home_boxscore['playerstats']]
         home_players = [Player(id) for id in home_player_ids]
         return home_players
 
     @property
     def away_players(self):
-        away_player_ids = [player['player']['playerId'] for player in self._away_boxscore['playerstats']]
+        away_player_ids = [player['player']['id'] for player in self._away_boxscore['playerstats']]
         away_players = [Player(id) for id in away_player_ids]
         return away_players
 
@@ -160,15 +158,15 @@ class Game:
 
     @property
     def periods(self):
-        return self._core_data['eventStatus']['period']
+        return self._core_data['last_play']['period']['id']
 
     @property
     def home_boxscore(self):
-        return self._core_data['boxscores'][0]
+        return self._home_boxscore
 
     @property
     def away_boxscore(self):
-        return self._core_data['boxscores'][1]
+        return self._away_boxscore
 
     def team_boxscore(self, team):
         if self.is_home(team):
@@ -192,9 +190,9 @@ class Game:
 
     def score(self, team):
         if self.is_home(team):
-            return self.home_boxscore['teamStats']['points']
+            return self.home_boxscore['team_stats']['points']
         elif self.is_away(team):
-            return self.away_boxscore['teamStats']['points']
+            return self.away_boxscore['team_stats']['points']
         else:
             raise GameDataError('{} did not participate in {}'.format(team, self))
 
@@ -215,19 +213,19 @@ class Game:
     @property
     def home_possessions(self):
 
-        home_fga = self.home_boxscore['teamStats']['fieldGoals']['attempted']
-        home_fgm = self.home_boxscore['teamStats']['fieldGoals']['made']
-        home_fta = self.home_boxscore['teamStats']['freeThrows']['attempted']
-        home_orb = self.home_boxscore['teamStats']['rebounds']['offensive']
-        home_drb = self.home_boxscore['teamStats']['rebounds']['defensive']
-        home_tov = self.home_boxscore['teamStats']['turnovers']['total']
+        home_fga = self.home_boxscore['team_stats']['field_goals']['attempted']
+        home_fgm = self.home_boxscore['team_stats']['field_goals']['made']
+        home_fta = self.home_boxscore['team_stats']['free_throws']['attempted']
+        home_orb = self.home_boxscore['team_stats']['rebounds']['offensive']
+        home_drb = self.home_boxscore['team_stats']['rebounds']['defensive']
+        home_tov = self.home_boxscore['team_stats']['turnovers']['total']
 
-        away_fga = self.away_boxscore['teamStats']['fieldGoals']['attempted']
-        away_fgm = self.away_boxscore['teamStats']['fieldGoals']['made']
-        away_fta = self.away_boxscore['teamStats']['freeThrows']['attempted']
-        away_orb = self.away_boxscore['teamStats']['rebounds']['offensive']
-        away_drb = self.away_boxscore['teamStats']['rebounds']['defensive']
-        away_tov = self.away_boxscore['teamStats']['turnovers']['total']
+        away_fga = self.away_boxscore['team_stats']['field_goals']['attempted']
+        away_fgm = self.away_boxscore['team_stats']['field_goals']['made']
+        away_fta = self.away_boxscore['team_stats']['free_throws']['attempted']
+        away_orb = self.away_boxscore['team_stats']['rebounds']['offensive']
+        away_drb = self.away_boxscore['team_stats']['rebounds']['defensive']
+        away_tov = self.away_boxscore['team_stats']['turnovers']['total']
 
         home_pos = 0.5 * ((home_fga + 0.4 * home_fta - 1.07 * (home_orb / (home_orb + away_drb)) *
                            (home_fga - home_fgm) + home_tov) +
@@ -239,19 +237,19 @@ class Game:
     @property
     def away_possessions(self):
 
-        home_fga = self.home_boxscore['teamStats']['fieldGoals']['attempted']
-        home_fgm = self.home_boxscore['teamStats']['fieldGoals']['made']
-        home_fta = self.home_boxscore['teamStats']['freeThrows']['attempted']
-        home_orb = self.home_boxscore['teamStats']['rebounds']['offensive']
-        home_drb = self.home_boxscore['teamStats']['rebounds']['defensive']
-        home_tov = self.home_boxscore['teamStats']['turnovers']['total']
+        home_fga = self.home_boxscore['team_stats']['field_goals']['attempted']
+        home_fgm = self.home_boxscore['team_stats']['field_goals']['made']
+        home_fta = self.home_boxscore['team_stats']['free_throws']['attempted']
+        home_orb = self.home_boxscore['team_stats']['rebounds']['offensive']
+        home_drb = self.home_boxscore['team_stats']['rebounds']['defensive']
+        home_tov = self.home_boxscore['team_stats']['turnovers']['total']
 
-        away_fga = self.away_boxscore['teamStats']['fieldGoals']['attempted']
-        away_fgm = self.away_boxscore['teamStats']['fieldGoals']['made']
-        away_fta = self.away_boxscore['teamStats']['freeThrows']['attempted']
-        away_orb = self.away_boxscore['teamStats']['rebounds']['offensive']
-        away_drb = self.away_boxscore['teamStats']['rebounds']['defensive']
-        away_tov = self.away_boxscore['teamStats']['turnovers']['total']
+        away_fga = self.away_boxscore['team_stats']['field_goals']['attempted']
+        away_fgm = self.away_boxscore['team_stats']['field_goals']['made']
+        away_fta = self.away_boxscore['team_stats']['free_throws']['attempted']
+        away_orb = self.away_boxscore['team_stats']['rebounds']['offensive']
+        away_drb = self.away_boxscore['team_stats']['rebounds']['defensive']
+        away_tov = self.away_boxscore['team_stats']['turnovers']['total']
 
         away_pos = 0.5 * ((away_fga + 0.4 * away_fta - 1.07 * \
                            (away_orb / (away_orb + home_drb)) * \
@@ -272,28 +270,27 @@ class Game:
 
     @property
     def home_drtg(self):
-        return 100 * self.away_boxscore['teamStats']['points'] / self.away_possessions
+        return 100 * self.away_boxscore['team_stats']['points'] / self.away_possessions
 
     @property
     def home_ortg(self):
-        return 100 * self.home_boxscore['teamStats']['points'] / self.home_possessions
+        return 100 * self.home_boxscore['team_stats']['points'] / self.home_possessions
 
     @property
     def away_drtg(self):
-        return 100 * self.home_boxscore['teamStats']['points'] / self.home_possessions
+        return 100 * self.home_boxscore['team_stats']['points'] / self.home_possessions
 
     @property
     def away_ortg(self):
-        return 100 * self.away_boxscore['teamStats']['points'] / self.away_possessions
+        return 100 * self.away_boxscore['team_stats']['points'] / self.away_possessions
 
     @property
     def home_points(self):
-        return int(self.home_boxscore['teamStats']['points'])
+        return int(self.home_boxscore['team_stats']['points'])
 
     @property
     def away_points(self):
-        return int(self.away_boxscore['teamStats']['points'])
-
+        return int(self.away_boxscore['team_stats']['points'])
 
     def __contains__(self, player_or_team):
 
@@ -306,28 +303,17 @@ class Game:
 
     def player_in_game(self, player):
 
-        home = [self.home_boxscore['teamId']
-                for stat in self.home_boxscore['playerstats']
-                if stat['player']['playerId'] == player.id]
-
-        away = [self.away_boxscore['teamId']
-                for stat in self.away_boxscore['playerstats']
-                if stat['player']['playerId'] == player.id]
-
-        if home != [] or away != []:
-            return True
-        else:
-            return False
+        return player in self.home_players or player in self.away_players
 
     def player_team(self, player):
 
-        home = [self.home_boxscore['teamId']
+        home = [self.home_boxscore['team_id']
                 for stat in self.home_boxscore['playerstats']
-                if stat['player']['playerId'] == player.id]
+                if stat['player']['id'] == player.id]
 
-        away = [self.away_boxscore['teamId']
+        away = [self.away_boxscore['team_id']
                 for stat in self.away_boxscore['playerstats']
-                if stat['player']['playerId'] == player.id]
+                if stat['player']['id'] == player.id]
 
         if home != [] and away == []:
             return Team(home[0])
@@ -340,8 +326,8 @@ class Game:
 
     def player_boxscore(self, player):
 
-        player_stats = [stat for stat in self.home_boxscore['playerstats'] if stat['player']['playerId'] == player.id] + \
-                       [stat for stat in self.away_boxscore['playerstats'] if stat['player']['playerId'] == player.id]
+        player_stats = [stat for stat in self.home_boxscore['playerstats'] if stat['player']['id'] == player.id] + \
+                       [stat for stat in self.away_boxscore['playerstats'] if stat['player']['id'] == player.id]
 
         if player_stats != []:
             return player_stats[0]
@@ -427,8 +413,7 @@ class Game:
             # this is expensive to compute so cache it in the db because it doesn't change
             # on a per-game basis
 
-            id_str = 'league.season.eventType.0.events.0.eventId'
-            update_str = 'league.season.eventType.0.events.0.boxscores.{}.lineups'.format(team_index)
+            update_str = 'box_scores.{}.lineups'.format(team_index)
 
             player_data = [player.id for player in players]
             time_data = []
@@ -438,11 +423,11 @@ class Game:
                 time_data.append({'start': interval[0].seconds, 'end': interval[1].seconds})
 
             lineup_data = {'players': player_data, 'times': time_data, 'hash': lineup_hash}
-            self._coll.update_one({id_str: self._id},
+            self._coll.update_one({'id': self._id},
                 {'$addToSet': {update_str: lineup_data}})
 
             # update the in-memory data
-            self._core_data['boxscores'][team_index]['lineups'].append(lineup_data)
+            self._core_data['box_scores'][team_index]['lineups'].append(lineup_data)
 
         return timestream
 
@@ -455,9 +440,11 @@ class Game:
     def quarter_starters(self):
 
         starting_lineup = set([player[0] for player in
-                           [event.players for event in self._events if event.play_text == 'Starting Lineup']])
+                               [event.players for event in
+                                self._events if event.play_text == 'Starting Lineup']])
 
         periods = self.periods
+        # print starting_lineup, periods
 
         quarter_starters = {1: starting_lineup}
 
@@ -465,7 +452,7 @@ class Game:
 
             quarter_plays = sorted([ev for ev in self._events if ev.period == q])
 
-            #pprint(quarter_plays)
+            # pprint(quarter_plays)
 
             home_players_used = set()
             away_players_used = set()
@@ -559,7 +546,7 @@ class Game:
 
     @classmethod
     def look_up_game(cls, game_day, team):
-
+        #:FIXME
         game = cls._coll.find_one({'league.season.eventType.0.events.0.startDate.0.month': game_day.month,
                                    'league.season.eventType.0.events.0.startDate.0.year': game_day.year,
                                    'league.season.eventType.0.events.0.startDate.0.date': game_day.day,
@@ -567,7 +554,7 @@ class Game:
                                            {'league.season.eventType.0.events.0.teams.1.teamId': team.id}]})
     
         if game is not None:
-            return Game(game['league']['season']['eventType'][0]['events'][0]['eventId'])
+            return Game(game['id'])
         else:
             return None
 
@@ -578,8 +565,9 @@ class Game:
         player_times = [player.time_on_court(self) for player in players_on]
         #end = time.clock()
         #print 'took {}s to calculate player times on court'.format(end - start)
-        shared_times = recursive_intersect(player_times)[0]
-        #print player_times
+        shared_times = recursive_intersect(player_times)
+        #pretty_print_times(player_times)
+        #print shared_times
 
         return shared_times
 
@@ -735,22 +723,22 @@ class Game:
 
         return box_score
 
-    def plot_all_game_charts(self):
-
-        home_players, away_players = get_player_boxscores(game_id)
-
-        for player in home_players:
-            print 'Processing ', player['first-name'], player['last-name']
-            player_id = player['id']
-            player_shot_chart(game_id, player_id)
-            team_shot_chart_with_player(game_id, player_id)
-            team_shot_chart_without_player(game_id, player_id)
-
-        for player in away_players:
-            print 'Processing ', player['first-name'], player['last-name']
-            player_id = player['id']
-            player_shot_chart(game_id, player_id)
-            team_shot_chart_with_player(game_id, player_id)
-            team_shot_chart_without_player(game_id, player_id)
+    # def plot_all_game_charts(self):
+    #
+    #     home_players, away_players = get_player_box_scores(game_id)
+    #
+    #     for player in home_players:
+    #         print 'Processing ', player['first-name'], player['last-name']
+    #         player_id = player['id']
+    #         player_shot_chart(game_id, player_id)
+    #         team_shot_chart_with_player(game_id, player_id)
+    #         team_shot_chart_without_player(game_id, player_id)
+    #
+    #     for player in away_players:
+    #         print 'Processing ', player['first-name'], player['last-name']
+    #         player_id = player['id']
+    #         player_shot_chart(game_id, player_id)
+    #         team_shot_chart_with_player(game_id, player_id)
+    #         team_shot_chart_without_player(game_id, player_id)
 
 

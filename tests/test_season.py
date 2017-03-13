@@ -2,8 +2,8 @@ __author__ = 'jerry'
 
 import datetime as dt
 
-from Season import Season
-from Team import Team
+from game.Season import Season
+from game.Team import Team
 from unittest import TestCase
 
 class SeasonTest(TestCase):
@@ -13,7 +13,7 @@ class SeasonTest(TestCase):
 
     def test_season_init(self):
 
-        self.assertEqual(self.season.season, '2013-2014 NBA Season')
+        self.assertEqual(str(self.season), '2013-2014 NBA Season')
         self.assertEqual(self.season.start_date, dt.datetime(2013, 10, 29, 19, 30))
         self.assertEqual(self.season.end_date, dt.datetime(2014, 4, 15, 20, 0))
 

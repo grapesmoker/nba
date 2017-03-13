@@ -8,7 +8,7 @@ si_base = 'http://www.si.com/nba/'
 
 # hook up to mongodb
 conn = pymongo.MongoClient('localhost', 27017)
-db = conn.db
+db = conn.nba
 
 # set up collections
 games = db.games
@@ -17,3 +17,4 @@ players = db.players
 teams = db.teams
 pbp = db.pbp
 odds = db.odds
+seasons = db.seasons

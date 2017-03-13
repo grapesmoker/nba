@@ -2,12 +2,9 @@ from __future__ import division
 
 __author__ = 'jerry'
 
-import datetime as dt
-from settings import pbp
+from utils.settings import pbp, seasons
 
 from Game import Game
-
-from utils import recursive_intersect
 
 
 class NoCollectionError(Exception):
@@ -41,6 +38,7 @@ class Season:
         self._start_date = None
         self._end_date = None
         self._season = season
+        self._asg = None
 
         self._index = 0
 
@@ -58,21 +56,27 @@ class Season:
 
     def get_by_season(self, season):
 
-        data = self._coll.find({'league.season.season': season})
+        season_data = seasons.find_one({'season': season})
+        self._start_date = season_data['start']
+        self._end_date = season_data['end']
+        self._asg = season_data['allStarGame']
+
+        data = self._coll.find({'game_date': {'$gte': self._start_date, '$lte': self._end_date}})
         self._data = data
         self.set_data(self._data)
 
     def set_data(self, data):
         self._games = []
-        for game_json in data:
-            event_id = game_json['league']['season']['eventType'][0]['events'][0]['eventId']
-            game = Game(event_id=event_id)
-            self._games.append(game)
+        self._games = sorted([Game(event_id=game['id']) for game in data])
+        # for game_json in data:
+        #     event_id = game_json['id']
+        #     game = Game(event_id=event_id)
+        #     self._games.append(game)
 
-        self._games = sorted(self._games)
+        #self._games = sorted(self._games)
 
-        self._start_date = self._games[0].date
-        self._end_date = self._games[-1].date
+        #self._start_date = self._games[0].date
+        #self._end_date = self._games[-1].date
 
     def __str__(self):
         return '{}-{} NBA Season'.format(self.season, self.season + 1)

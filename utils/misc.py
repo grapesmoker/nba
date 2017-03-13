@@ -20,6 +20,7 @@ def is_shot_three(x, y):
         else:
             return False
 
+
 def format_date(d, source='SI'):
 
     if source == 'NBA':
@@ -35,6 +36,13 @@ def play_time(play):
 
     return dt.timedelta(minutes=((4 - int(play['period'])) * 12 + int(play['time']['minutes'])),
                         seconds=int(float(play['time']['seconds'])))
+
+def play_time_in_seconds(q, m, s):
+
+    t1 = dt.timedelta(minutes=q*12)
+    t2 = dt.timedelta(minutes=m, seconds=s)
+    total = t1 - t2
+    return total.seconds
 
 def look_up_player_id (first_name, last_name):
 
@@ -67,7 +75,7 @@ def intersect_all(times):
     new_times = []
     for t1, t2 in combinations(times, 2):
        t = times_overlap(t1, t2)
-       if t is not None:
+       if t is not None and not t[0] == t[1]:
            new_times.append(t)
     return new_times
 
@@ -155,6 +163,7 @@ def shared_times(times):
         i += 1
 
     return final_times
+
 
 def recursive_intersect(timestream):
 
@@ -260,16 +269,18 @@ def times_overlap(t1, t2):
     t2_start = t2[0]
     t2_end = t2[1]
 
-    if t2_start <= t1_start and t2_start > t1_end:
-        if t1_end > t2_end:
-            return (t2_start, t1_end)
-        elif t1_end <= t2_end:
-            return (t2_start, t2_end)
-    elif t1_start <= t2_start and t1_start > t2_end:
-        if t2_end > t1_end:
-            return (t1_start, t2_end)
-        elif t2_end <= t1_end:
-            return (t1_start, t1_end)
+    # print t1_start, t2_start, t1_end, t2_end
+
+    if t1_end < t2_start or t2_end < t1_start:
+        return None
+    elif t1_start <= t2_start and t1_end >= t2_end:
+        return (t2_start, t2_end)
+    elif t1_start <= t2_start and t1_end <= t2_end:
+        return (t2_start, t1_end)
+    elif t1_start >= t2_start and t1_end >= t2_end:
+        return (t1_start, t2_end)
+    elif t1_start >= t2_start and t1_end <= t2_end:
+        return (t1_start, t1_end)
     else:
         return None
 

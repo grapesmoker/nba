@@ -1,5 +1,3 @@
-__author__ = 'jerry'
-
 import numpy as np
 import matplotlib.pyplot as mpl
 import pandas as pd
@@ -18,8 +16,8 @@ from sklearn.manifold import MDS
 
 from matplotlib.colors import Normalize, BoundaryNorm, ListedColormap
 
-from Player import Player
-from Game import Game
+from game.Player import Player
+from game.Game import Game
 from features import *
 from clustering import *
 

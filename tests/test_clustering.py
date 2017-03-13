@@ -1,21 +1,9 @@
 __author__ = 'jerry'
 
-import datetime as dt
-import pymongo
-import numpy as np
 import os
-
-from unittest import TestCase
 from pprint import pprint
+from unittest import TestCase
 
-from Game import Game
-from Player import Player
-from Team import Team
-from Season import Season
-
-from settings import players
-
-from analysis.features import player_ocluster_features
 from analysis.clustering import compute_player_clusters
 
 class TestClustering(TestCase):

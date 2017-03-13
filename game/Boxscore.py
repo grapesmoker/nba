@@ -5,20 +5,20 @@ import re
 from pprint import pprint
 
 empty_team_boxscore = {
-    'threePointFieldGoals': {
+    'three_point_field_goals': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0,
     },
     'points_in_paint': 0,
     'jumpshots': 0,
-    'freeThrows': {
+    'free_throws': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0
     },
     'hooks': 0,
-    'fieldGoals': {
+    'field_goals': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0,
@@ -27,17 +27,17 @@ empty_team_boxscore = {
         'player':0,
         'coach': 0,
     },
-    'defensive3seconds': 0,
+    'defensive_3_seconds': 0,
     'disqualifications': 0,
-    'personalFouls': 0,
-    'technicalFouls': {
+    'personal_fouls': 0,
+    'technical_fouls': {
         'player': 0,
         'coach': 0,
         'bench': 0,
         'team': 0,
     },
-    'timeoutsRemaining': {},
-    'secondChancePoints': 0,
+    'timeouts_remaining': {},
+    'second_chance_points': 0,
     'tipins': 0,
     'dunks': 0,
     'layups': 0,
@@ -46,69 +46,69 @@ empty_team_boxscore = {
     'rebounds': {
         'offensive': 0,
         'defensive': 0,
-        'teamDefensive': 0,
-        'teamOffensive': 0,
+        'team_defensive': 0,
+        'team_offensive': 0,
         'team': 0,
         'total': 0,
-        'deadBall': 0,
+        'dead_ball': 0,
     },
-    'fastBreakPoints': 0,
+    'fast_break_points': 0,
     'steals': 0,
     'turnovers': {
         'total': 0,
         'team': 0,
     },
-    'pointsOffTurnovers': 0,
-    'flagrantFouls': 0,
-    'biggestLead': 0,
+    'points_off_turnovers': 0,
+    'flagrant_fouls': 0,
+    'biggest_lead': 0,
     'points': 0,
-    'pointsAgainst': 0,
+    'points_against': 0,
     'minutes': 0,
 }
 
 empty_player_boxscore = {
-    'threePointFieldGoals': {
+    'three_point_fieldGoals': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0,
     },
-    'freeThrows': {
+    'free_throws': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0
     },
-    'fieldGoals': {
+    'field_goals': {
         'attempted': 0,
         'percentage': 0.0,
         'made': 0,
     },
     'player': {
-        'playerId': 0,
-        'lastName': '',
-        'firstName': '',
+        'id': 0,
+        'last_name': '',
+        'first_name': '',
         'uniform': 0,
     },
-    'isDisqualification': False,
-    'plusMinus': 0,
-    'isEjected': False,
-    'isGamePlayed': True,
-    'isGameStarted': False,
-    'personalFouls': 0,
-    'technicalFouls': 0,
+    'is_disqualification': False,
+    'plus_minus': 0,
+    'is_ejected': False,
+    'is_game_played': True,
+    'is_game_started': False,
+    'personal_fouls': 0,
+    'technical_fouls': 0,
     'assists': 0,
-    'blockedShots': 0,
+    'blocked_shots': 0,
     'rebounds': {
         'offensive': 0,
         'defensive': 0,
         'total': 0,
     },
-    'fastBreakPoints': 0,
+    'fast_break_points': 0,
     'steals': 0,
     'turnovers': 0,
-    'pointsOffTurnovers': 0,
-    'flagrantFouls': 0,
-    'totalSecondsPlayed': 0,
-    'minutesPlayed': 0,
+    'points_off_turnovers': 0,
+    'flagrant_fouls': 0,
+    'total_seconds_played': 0,
+    'minutes_played': 0,
     'points': 0,
 }
 

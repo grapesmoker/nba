@@ -1,4 +1,4 @@
-from network import teams
+from utils.network import teams
 
 import Game
 
@@ -63,7 +63,7 @@ class Team:
         return self._data['id']
 
     def __str__(self):
-        return ' '.join((self.location, self.nickname))
+        return self.nickname
 
     def __repr__(self):
         return self.__str__()

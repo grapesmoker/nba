@@ -16,7 +16,7 @@ from matplotlib.colorbar import ColorbarBase
 
 from court import draw_court
 from hexes import create_hexes, find_hex_from_xy
-from utils import is_shot_three
+from utils.misc import is_shot_three
 
 def plot_player_shots(player, games, plot_type='hexbin', hex_size=2):
 

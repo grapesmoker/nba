@@ -2,10 +2,10 @@ __author__ = 'jerry'
 
 import datetime as dt
 
-from settings import pbp
+from scipy.spatial.distance import euclidean
 
 from Player import Player
-from scipy.spatial.distance import euclidean
+from utils.settings import pbp
 
 
 class Event:
@@ -33,16 +33,24 @@ class Event:
     def __init__(self, play_data):
         self._coll = self.__class__._coll
         self._play_data = play_data
-        self._id = int(self._play_data['playId'])
+        self._id = int(self._play_data['play_id'])
         self.possession = None
         self.shot_clock = 0.0
 
     @property
     def play_time(self):
 
-        minutes = int(self._play_data['time']['minutes'])
-        seconds = float(self._play_data['time']['seconds'])
-        period = int(self._play_data['period'])
+        try:
+            minutes = int(self._play_data['time'].split(':')[0])
+        except:
+            minutes = 0
+
+        try:
+            seconds = float(self._play_data['time'].split(':')[1])
+        except:
+            seconds = float(self._play_data['time'])
+
+        period = int(self._play_data['period']['id'])
 
         if period < 5:
             q_start_time = dt.timedelta(minutes=(period - 1) * 12)
@@ -71,14 +79,14 @@ class Event:
     def players(self):
         result = []
         for player in self._play_data['players']:
-            event_player = Player(player['playerId'])
+            event_player = Player(player['id'])
             if event_player.id is not None:
                 result.append(event_player)
         return result
 
     @property
     def shot_coordinates(self):
-        coords = self._play_data['shotCoordinates']
+        coords = self._play_data['shot_coordinates']
         if coords != {}:
             return coords['x'], coords['y'] + 5.25
         else:
@@ -86,27 +94,27 @@ class Event:
 
     @property
     def shot_x(self):
-        coords = self._play_data['shotCoordinates']
+        coords = self._play_data['shot_coordinates']
         if coords != {}:
             return coords['x']
 
     @property
     def shot_y(self):
-        coords = self._play_data['shotCoordinates']
+        coords = self._play_data['shot_coordinates']
         if coords != {}:
             return coords['y'] + 5.25
 
     @property
     def id(self):
-        return self._play_data['playId']
+        return self._id
 
     @property
     def period(self):
-        return self._play_data['period']
+        return self._play_data['period']['id']
 
     @property
     def play_text(self):
-        return self._play_data['playText']
+        return self._play_data['play_text']
 
     def is_in_interval(self, interval):
 
@@ -154,14 +162,14 @@ class Event:
 
     @property
     def play_type(self):
-        if 'name' in self._play_data['playEvent']:
-            return self._play_data['playEvent']['name']
+        if 'name' in self._play_data['play_event']:
+            return self._play_data['play_event']['name']
         else:
             return self.play_text
 
     @property
     def play_type_id(self):
-        return self._play_data['playEvent']['playEventId']
+        return self._play_data['play_event']['play_event_id']
 
     @property
     def is_field_goal_made(self):
@@ -197,7 +205,7 @@ class Event:
 
     @property
     def is_technical(self):
-        if self.is_foul and self._play_data['playEvent']['playDetail']['name'].find('Technical') > -1:
+        if self.is_foul and self._play_data['play_event']['name'].find('Technical') > -1:
             return True
         else:
             return False
