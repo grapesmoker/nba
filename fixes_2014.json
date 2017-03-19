@@ -1,0 +1,120 @@
+{
+    "fixes": [
+	{
+	    "player_id": 3388,
+	    "game_id": 1459644,
+	    "times": [
+		{
+		    "start": 455,
+		    "end": 720
+		},
+		{
+		    "start": 720,
+		    "end": 1185
+		},
+		{
+		    "start": 1439,
+		    "end": 1440
+		},
+		{
+		    "start": 2015,
+		    "end": 2160
+		},
+		{
+		    "start": 2160,
+		    "end": 2820
+		},
+		{
+		    "start": 2840,
+		    "end": 2880
+		}
+	    ]
+	},
+	{
+	    "player_id": 168051,
+	    "game_id": 1459644,
+	    "times": [
+		{
+		    "start": 0,
+		    "end": 528
+		},
+		{
+		    "start": 1002,
+		    "end": 1440
+		},
+		{
+		    "start": 1440,
+		    "end": 2106
+		},
+		{
+		    "start": 2434,
+		    "end":  2812
+		},
+		{
+		    "start": 2820,
+		    "end": 2880
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	},
+	{
+	    "player_id": ,
+	    "game_id": ,
+	    "times": [
+		{
+		    "start": ,
+		    "end":
+		}
+	    ]
+	}
+    ]
+}

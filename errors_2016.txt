@@ -1,0 +1,100 @@
+In computing playing time for Vince Carter (3230) in Washington Wizards vs Memphis Grizzlies on 2017-01-18 (1674352):
+Discrepancy between computed time: 20.25, and boxscore time: 29.82
+In computing playing time for Vince Carter (3230) in Memphis Grizzlies vs Toronto Raptors on 2017-01-25 (1674453):
+Discrepancy between computed time: 50.78, and boxscore time: 30.32
+In computing playing time for Jamal Crawford (3388) in Cleveland Cavaliers vs Los Angeles Clippers on 2016-12-01 (1674527):
+Discrepancy between computed time: 10.46, and boxscore time: 20.68
+In computing playing time for Mike Dunleavy (168066) in Atlanta Hawks vs New York Knicks on 2017-01-29 (1673971):
+Discrepancy between computed time: 43.83, and boxscore time: 21.80
+In computing playing time for Tony Allen (172922) in Memphis Grizzlies vs Toronto Raptors on 2017-01-25 (1674453):
+Discrepancy between computed time: 19.79, and boxscore time: 34.80
+In computing playing time for Chris Paul (229598) in Cleveland Cavaliers vs Los Angeles Clippers on 2016-12-01 (1674527):
+Discrepancy between computed time: 28.32, and boxscore time: 24.87
+In computing playing time for Kris Humphries (229649) in Atlanta Hawks vs Los Angeles Lakers on 2016-11-02 (1673896):
+Discrepancy between computed time: 37.83, and boxscore time: 13.83
+In computing playing time for Bobby Brown (242307) in Dallas Mavericks vs Houston Rockets on 2016-10-28 (1674939):
+Discrepancy between computed time: 1.00, and boxscore time: 0.18
+In computing playing time for Al Jefferson (253995) in Indiana Pacers vs Philadelphia 76ers on 2016-11-09 (1674729):
+Discrepancy between computed time: 32.35, and boxscore time: 20.35
+In computing playing time for DeMarre Carroll (262890) in Charlotte Bobcats vs Toronto Raptors on 2017-01-20 (1674273):
+Discrepancy between computed time: 37.50, and boxscore time: 25.50
+In computing playing time for Garrett Temple (263903) in Washington Wizards vs Sacramento Kings on 2016-11-28 (1674141):
+Discrepancy between computed time: 16.33, and boxscore time: 28.33
+In computing playing time for Kyle Lowry (266394) in Charlotte Bobcats vs Toronto Raptors on 2017-01-20 (1674273):
+Discrepancy between computed time: 23.63, and boxscore time: 34.38
+In computing playing time for Mike Conley (329468) in Washington Wizards vs Memphis Grizzlies on 2017-01-18 (1674352):
+Discrepancy between computed time: 32.45, and boxscore time: 30.58
+In computing playing time for Thaddeus Young (329683) in Indiana Pacers vs Philadelphia 76ers on 2016-11-09 (1674729):
+Discrepancy between computed time: 26.48, and boxscore time: 35.62
+In computing playing time for Taj Gibson (330057) in Charlotte Bobcats vs Chicago Bulls on 2016-12-23 (1674235):
+Discrepancy between computed time: 35.48, and boxscore time: 29.95
+In computing playing time for Marco Belinelli (393434) in Charlotte Bobcats vs Los Angeles Clippers on 2017-02-11 (1674330):
+Discrepancy between computed time: 62.52, and boxscore time: 26.62
+In computing playing time for James Harden (395388) in Dallas Mavericks vs Houston Rockets on 2016-10-28 (1674939):
+Discrepancy between computed time: 35.85, and boxscore time: 36.52
+In computing playing time for Jon Leuer (398090) in Toronto Raptors vs Detroit Pistons on 2017-02-12 (1674929):
+Discrepancy between computed time: 12.28, and boxscore time: 16.97
+In computing playing time for Marcus Thornton (398590) in Washington Wizards vs Miami Heat on 2016-11-19 (1674118):
+Discrepancy between computed time: 13.53, and boxscore time: 22.62
+In computing playing time for Alexis Ajinca (456449) in San Antonio Spurs vs New Orleans Pelicans on 2016-10-29 (1674830):
+Discrepancy between computed time: 15.22, and boxscore time: 17.08
+In computing playing time for DeMar DeRozan (457594) in Toronto Raptors vs Orlando Magic on 2017-01-29 (1674896):
+Discrepancy between computed time: 41.15, and boxscore time: 36.25
+In computing playing time for Isaiah Thomas (457605) in Boston Celtics vs Toronto Raptors on 2017-02-01 (1674000):
+Discrepancy between computed time: 49.86, and boxscore time: 37.93
+In computing playing time for John Henson (502871) in Milwaukee Bucks vs Cleveland Cavaliers on 2016-12-20 (1673948):
+Discrepancy between computed time: 21.64, and boxscore time: 26.65
+In computing playing time for Mike Muscala (520388) in Atlanta Hawks vs New York Knicks on 2017-01-29 (1673971):
+Discrepancy between computed time: 53.53, and boxscore time: 21.70
+In computing playing time for Robert Covington (525052) in Utah Jazz vs Philadelphia 76ers on 2016-12-29 (1674761):
+Discrepancy between computed time: 31.68, and boxscore time: 34.27
+In computing playing time for Allen Crabbe (548610) in Portland Trail Blazers vs Detroit Pistons on 2017-01-08 (1712382):
+Discrepancy between computed time: 37.57, and boxscore time: 42.57
+In computing playing time for Andre Roberson (548635) in Oklahoma City Thunder vs Washington Wizards on 2016-11-30 (1674085):
+Discrepancy between computed time: 30.02, and boxscore time: 35.02
+In computing playing time for Langston Galloway (551321) in Phoenix Suns vs New Orleans Pelicans on 2016-12-11 (1675039):
+Discrepancy between computed time: 14.38, and boxscore time: 19.38
+In computing playing time for T.J. McConnell (551787) in Denver Nuggets vs Philadelphia 76ers on 2016-12-30 (1674081):
+Discrepancy between computed time: 71.82, and boxscore time: 35.90
+In computing playing time for Dion Waiters (552007) in Miami Heat vs Sacramento Kings on 2016-11-01 (1674390):
+Discrepancy between computed time: 37.37, and boxscore time: 42.37
+In computing playing time for Jerian Grant (552319) in Boston Celtics vs Chicago Bulls on 2016-11-02 (1673901):
+Discrepancy between computed time: 8.92, and boxscore time: 13.20
+In computing playing time for Jerian Grant (552319) in Charlotte Bobcats vs Chicago Bulls on 2016-12-23 (1674235):
+Discrepancy between computed time: 15.50, and boxscore time: 12.63
+In computing playing time for Donatas Motiejunas (599805) in Minnesota Timberwolves vs New Orleans Pelicans on 2017-02-10 (1674222):
+Discrepancy between computed time: 17.61, and boxscore time: 19.02
+In computing playing time for Michael Kidd-Gilchrist (603095) in Charlotte Bobcats vs Los Angeles Clippers on 2017-02-11 (1674330):
+Discrepancy between computed time: 22.57, and boxscore time: 30.63
+In computing playing time for Anthony Davis (603096) in Minnesota Timberwolves vs New Orleans Pelicans on 2017-02-10 (1674222):
+Discrepancy between computed time: 65.29, and boxscore time: 36.25
+In computing playing time for Kyle Wiltjer (603098) in Dallas Mavericks vs Houston Rockets on 2016-10-28 (1674939):
+Discrepancy between computed time: 1.00, and boxscore time: 0.35
+In computing playing time for K.J. McDaniels (604734) in Dallas Mavericks vs Houston Rockets on 2016-10-28 (1674939):
+Discrepancy between computed time: 22.23, and boxscore time: 23.05
+In computing playing time for K.J. McDaniels (604734) in San Antonio Spurs vs Houston Rockets on 2016-11-09 (1674870):
+Discrepancy between computed time: 0.00, and boxscore time: 4.82
+In computing playing time for Otto Porter (609256) in Washington Wizards vs Miami Heat on 2016-11-19 (1674118):
+Discrepancy between computed time: 39.12, and boxscore time: 36.85
+In computing playing time for Otto Porter (609256) in Oklahoma City Thunder vs Washington Wizards on 2016-11-30 (1674085):
+Discrepancy between computed time: 34.33, and boxscore time: 39.33
+In computing playing time for Norman Powell (609861) in Toronto Raptors vs Orlando Magic on 2017-01-29 (1674896):
+Discrepancy between computed time: 14.86, and boxscore time: 12.78
+In computing playing time for Mindaugas Kuzminskas (639284) in Boston Celtics vs New York Knicks on 2016-11-11 (1673905):
+Discrepancy between computed time: 24.95, and boxscore time: 16.28
+In computing playing time for Nerlens Noel (699947) in Utah Jazz vs Philadelphia 76ers on 2016-12-29 (1674761):
+Discrepancy between computed time: 22.30, and boxscore time: 19.72
+In computing playing time for Bobby Portis (750703) in Boston Celtics vs Chicago Bulls on 2016-11-02 (1673901):
+Discrepancy between computed time: 12.00, and boxscore time: 11.02
+In computing playing time for Tyler Ennis (786387) in Dallas Mavericks vs Houston Rockets on 2016-12-27 (1674657):
+Discrepancy between computed time: 6.05, and boxscore time: 18.05
+In computing playing time for Dario Saric (830641) in Denver Nuggets vs Philadelphia 76ers on 2016-12-30 (1674081):
+Discrepancy between computed time: 22.92, and boxscore time: 27.92
+In computing playing time for Clint Capela (830647) in San Antonio Spurs vs Houston Rockets on 2016-11-09 (1674870):
+Discrepancy between computed time: 41.85, and boxscore time: 17.85
+In computing playing time for Stanley Johnson (844331) in Toronto Raptors vs Detroit Pistons on 2017-02-12 (1674929):
+Discrepancy between computed time: 35.62, and boxscore time: 23.62
+In computing playing time for Jaylen Brown (883436) in Boston Celtics vs Toronto Raptors on 2017-02-01 (1674000):
+Discrepancy between computed time: 13.91, and boxscore time: 22.70
+In computing playing time for Cheick Diallo (887902) in San Antonio Spurs vs New Orleans Pelicans on 2016-10-29 (1674830):
+Discrepancy between computed time: 5.72, and boxscore time: 3.85

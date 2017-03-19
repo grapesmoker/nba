@@ -1,0 +1,106 @@
+In computing playing time for Jamal Crawford (3388) in Denver Nuggets vs Los Angeles Clippers on 2014-12-19 (1459644):
+Discrepancy between computed time: 14.92, and boxscore time: 26.27
+In computing playing time for Gerald Wallace (3514) in Boston Celtics vs Indiana Pacers on 2014-11-07 (1460083):
+Discrepancy between computed time: 20.32, and boxscore time: 8.37
+In computing playing time for Steve Blake (58258) in Oklahoma City Thunder vs Portland Trail Blazers on 2014-12-23 (1459610):
+Discrepancy between computed time: 29.91, and boxscore time: 34.90
+In computing playing time for Willie Green (58948) in Orlando Magic vs Dallas Mavericks on 2015-01-31 (1460102):
+Discrepancy between computed time: 16.37, and boxscore time: 28.03
+In computing playing time for Nene Hilario (168013) in Washington Wizards vs Oklahoma City Thunder on 2015-01-21 (1459654):
+Discrepancy between computed time: 21.46, and boxscore time: 34.30
+In computing playing time for Matt Barnes (168051) in Denver Nuggets vs Los Angeles Clippers on 2014-12-19 (1459644):
+Discrepancy between computed time: 45.50, and boxscore time: 34.50
+In computing playing time for Luis Scola (168061) in Indiana Pacers vs Philadelphia 76ers on 2014-10-29 (1460124):
+Discrepancy between computed time: 55.33, and boxscore time: 24.73
+In computing playing time for Mike Dunleavy (168066) in Chicago Bulls vs Dallas Mavericks on 2014-12-02 (1459528):
+Discrepancy between computed time: 43.80, and boxscore time: 48.80
+In computing playing time for P.J. Tucker (229602) in Brooklyn Nets vs Phoenix Suns on 2015-03-06 (1460509):
+Discrepancy between computed time: 31.92, and boxscore time: 36.92
+In computing playing time for Trevor Ariza (229738) in Houston Rockets vs Cleveland Cavaliers on 2015-03-01 (1459920):
+Discrepancy between computed time: 37.23, and boxscore time: 42.23
+In computing playing time for Paul Millsap (237675) in Atlanta Hawks vs Orlando Magic on 2015-02-27 (1459776):
+Discrepancy between computed time: 38.46, and boxscore time: 34.58
+In computing playing time for Jared Dudley (241712) in Charlotte Bobcats vs Milwaukee Bucks on 2014-10-29 (1460219):
+Discrepancy between computed time: 21.17, and boxscore time: 26.17
+In computing playing time for Al Jefferson (253995) in Charlotte Bobcats vs Oklahoma City Thunder on 2015-02-21 (1460406):
+Discrepancy between computed time: 25.17, and boxscore time: 33.60
+In computing playing time for Corey Brewer (263217) in Houston Rockets vs Oklahoma City Thunder on 2015-01-15 (1459857):
+Discrepancy between computed time: 14.87, and boxscore time: 26.87
+In computing playing time for Kyle Lowry (266394) in Houston Rockets vs Toronto Raptors on 2015-02-21 (1459902):
+Discrepancy between computed time: 63.60, and boxscore time: 36.67
+In computing playing time for Courtney Lee (276755) in Memphis Grizzlies vs Houston Rockets on 2014-12-26 (1460071):
+Discrepancy between computed time: 34.63, and boxscore time: 39.63
+In computing playing time for Al Horford (280587) in Atlanta Hawks vs Orlando Magic on 2015-02-27 (1459776):
+Discrepancy between computed time: 25.80, and boxscore time: 30.80
+In computing playing time for Dante Cunningham (295799) in Brooklyn Nets vs New Orleans Pelicans on 2015-03-10 (1460518):
+Discrepancy between computed time: 14.35, and boxscore time: 26.35
+In computing playing time for Danny Green (295922) in Miami Heat vs San Antonio Spurs on 2015-03-31 (1460171):
+Discrepancy between computed time: 24.83, and boxscore time: 14.83
+In computing playing time for Ryan Anderson (329715) in New Orleans Pelicans vs Minnesota Timberwolves on 2014-11-14 (1459479):
+Discrepancy between computed time: 23.81, and boxscore time: 22.92
+In computing playing time for Brook Lopez (330047) in Brooklyn Nets vs Dallas Mavericks on 2015-01-05 (1460427):
+Discrepancy between computed time: 49.90, and boxscore time: 33.48
+In computing playing time for Darrell Arthur (330347) in Houston Rockets vs Denver Nuggets on 2014-12-13 (1459790):
+Discrepancy between computed time: 25.25, and boxscore time: 24.05
+In computing playing time for Greivis Vasquez (332666) in Houston Rockets vs Toronto Raptors on 2015-02-21 (1459902):
+Discrepancy between computed time: 13.65, and boxscore time: 22.35
+In computing playing time for Henry Walker (351927) in Toronto Raptors vs Miami Heat on 2015-03-13 (1460011):
+Discrepancy between computed time: 22.43, and boxscore time: 25.35
+In computing playing time for Tiago Splitter (393436) in Miami Heat vs San Antonio Spurs on 2015-03-31 (1460171):
+Discrepancy between computed time: 20.98, and boxscore time: 22.62
+In computing playing time for O.J. Mayo (395372) in Boston Celtics vs Milwaukee Bucks on 2015-04-03 (1460492):
+Discrepancy between computed time: 47.22, and boxscore time: 29.37
+In computing playing time for James Harden (395388) in Houston Rockets vs Oklahoma City Thunder on 2015-01-15 (1459857):
+Discrepancy between computed time: 67.35, and boxscore time: 37.37
+In computing playing time for Evan Turner (398068) in Boston Celtics vs Indiana Pacers on 2014-11-07 (1460083):
+Discrepancy between computed time: 11.85, and boxscore time: 16.35
+In computing playing time for Patrick Patterson (399599) in Toronto Raptors vs Chicago Bulls on 2015-03-25 (1460046):
+Discrepancy between computed time: 16.27, and boxscore time: 28.27
+In computing playing time for J.J. Hickson (400585) in Houston Rockets vs Denver Nuggets on 2014-12-13 (1459790):
+Discrepancy between computed time: 24.97, and boxscore time: 22.07
+In computing playing time for Michael Beasley (405345) in Toronto Raptors vs Miami Heat on 2015-03-13 (1460011):
+Discrepancy between computed time: 25.57, and boxscore time: 22.65
+In computing playing time for Kent Bazemore (410764) in Los Angeles Lakers vs Atlanta Hawks on 2015-03-15 (1460292):
+Discrepancy between computed time: 39.35, and boxscore time: 37.82
+In computing playing time for Nicolas Batum (456451) in Dallas Mavericks vs Portland Trail Blazers on 2015-02-07 (1460468):
+Discrepancy between computed time: 37.48, and boxscore time: 42.48
+In computing playing time for DeMar DeRozan (457594) in Toronto Raptors vs Chicago Bulls on 2015-03-25 (1460046):
+Discrepancy between computed time: 43.88, and boxscore time: 39.05
+In computing playing time for Nikola Vucevic (457598) in Orlando Magic vs Dallas Mavericks on 2015-01-31 (1460102):
+Discrepancy between computed time: 42.50, and boxscore time: 30.50
+In computing playing time for Al-Farouq Aminu (457688) in New Orleans Pelicans vs Dallas Mavericks on 2015-01-25 (1459563):
+Discrepancy between computed time: 27.04, and boxscore time: 15.20
+In computing playing time for Kemba Walker (462980) in Toronto Raptors vs Charlotte Bobcats on 2015-01-08 (1459876):
+Discrepancy between computed time: 66.33, and boxscore time: 40.97
+In computing playing time for Tyreke Evans (464841) in New Orleans Pelicans vs Minnesota Timberwolves on 2014-11-14 (1459479):
+Discrepancy between computed time: 18.05, and boxscore time: 26.45
+In computing playing time for Quincy Acy (469234) in San Antonio Spurs vs New York Knicks on 2014-12-10 (1460674):
+Discrepancy between computed time: 27.27, and boxscore time: 24.98
+In computing playing time for Brandon Jennings (478196) in Milwaukee Bucks vs Detroit Pistons on 2015-01-24 (1460549):
+Discrepancy between computed time: 38.13, and boxscore time: 26.13
+In computing playing time for Omri Casspi (503779) in Sacramento Kings vs San Antonio Spurs on 2014-11-15 (1460122):
+Discrepancy between computed time: 46.42, and boxscore time: 22.42
+In computing playing time for John Jenkins (509472) in Los Angeles Lakers vs Atlanta Hawks on 2015-03-15 (1460292):
+Discrepancy between computed time: 26.53, and boxscore time: 23.75
+In computing playing time for Lance Stephenson (511057) in Charlotte Bobcats vs Oklahoma City Thunder on 2015-02-21 (1460406):
+Discrepancy between computed time: 38.97, and boxscore time: 26.97
+In computing playing time for Darius Morris (511638) in Brooklyn Nets vs Dallas Mavericks on 2015-01-05 (1460427):
+Discrepancy between computed time: 5.85, and boxscore time: 9.25
+In computing playing time for Khris Middleton (512053) in Boston Celtics vs Milwaukee Bucks on 2015-04-03 (1460492):
+Discrepancy between computed time: 24.12, and boxscore time: 34.25
+In computing playing time for Matthew Dellavedova (531447) in Houston Rockets vs Cleveland Cavaliers on 2015-03-01 (1459920):
+Discrepancy between computed time: 36.69, and boxscore time: 41.70
+In computing playing time for Pablo Prigioni (552599) in San Antonio Spurs vs New York Knicks on 2014-12-10 (1460674):
+Discrepancy between computed time: 13.45, and boxscore time: 19.87
+In computing playing time for Brandon Knight (553575) in Phoenix Suns vs Oklahoma City Thunder on 2015-02-26 (1459600):
+Discrepancy between computed time: 42.53, and boxscore time: 47.53
+In computing playing time for Bojan Bogdanovic (599812) in Brooklyn Nets vs Milwaukee Bucks on 2015-03-20 (1460524):
+Discrepancy between computed time: 43.52, and boxscore time: 48.52
+In computing playing time for Bradley Beal (606912) in Washington Wizards vs Boston Celtics on 2014-12-08 (1459558):
+Discrepancy between computed time: 40.74, and boxscore time: 45.73
+In computing playing time for Andre Drummond (614746) in Milwaukee Bucks vs Detroit Pistons on 2015-01-24 (1460549):
+Discrepancy between computed time: 13.58, and boxscore time: 21.05
+In computing playing time for Noah Vonleh (786397) in Toronto Raptors vs Charlotte Bobcats on 2015-01-08 (1459876):
+Discrepancy between computed time: 18.70, and boxscore time: 9.90
+In computing playing time for Damjan Rudez (833017) in Indiana Pacers vs Philadelphia 76ers on 2014-10-29 (1460124):
+Discrepancy between computed time: 16.38, and boxscore time: 14.82
